@@ -13,6 +13,7 @@ import { TransactionModal } from './components/TransactionModal';
 import { LoanModal } from './components/LoanModal';
 import { FixedExpensesModal } from './components/FixedExpensesModal';
 import { Sidebar } from './components/Sidebar';
+import { MobileHome } from './components/MobileHome'; // NEW IMPORT
 import { LoginView } from './components/LoginView'; 
 import { Trash2, Edit3, X, Save, CreditCard, Loader2, ArrowLeft, Database, RefreshCw, CalendarClock } from 'lucide-react';
 import { supabase } from './supabaseClient';
@@ -34,7 +35,7 @@ const INITIAL_DATA: AppData = {
   partner: { partnerName: '', dateBudget: 0 }
 };
 
-// Internal Component for Balance Adjustment
+// Internal Component for Balance Adjustment (Kept same as before)
 interface BalanceAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -178,229 +179,9 @@ const BalanceAdjustmentModal: React.FC<BalanceAdjustmentModalProps> = ({ isOpen,
   );
 };
 
-// Internal Component for Car Configuration
-interface CarConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  data: AppData;
-  onUpdate: (config: any) => void;
-}
+// Internal Component for Car Config & House Config & Partner Config omitted for brevity as they are unchanged
 
-const CarConfigModal: React.FC<CarConfigModalProps> = ({ isOpen, onClose, data, onUpdate }) => {
-  const [model, setModel] = useState('');
-  const [ipva, setIpva] = useState('');
-  const [insurance, setInsurance] = useState('');
-  const [plate, setPlate] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setModel(data.car?.modelName || '');
-      setIpva(data.car?.ipvaTotal === 0 ? '' : data.car?.ipvaTotal?.toString() || '');
-      setInsurance(data.car?.insuranceTotal === 0 ? '' : data.car?.insuranceTotal?.toString() || '');
-      setPlate(data.car?.plateLastDigit || '');
-    }
-  }, [isOpen, data]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdate({
-      modelName: model,
-      ipvaTotal: parseFloat(ipva) || 0,
-      insuranceTotal: parseFloat(insurance) || 0,
-      licensingTotal: data.car?.licensingTotal || 0,
-      plateLastDigit: plate
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Veículo</h2>
-          <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20">
-            <X size={20} className="text-[#13312A]" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Modelo</label>
-            <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Total IPVA (Anual)</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={ipva} onChange={(e) => setIpva(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Seguro (Anual)</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={insurance} onChange={(e) => setInsurance(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Final da Placa</label>
-            <input type="text" maxLength={1} value={plate} onChange={(e) => setPlate(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none text-center" />
-          </div>
-          <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Internal Component for House Configuration
-interface HouseConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  data: AppData;
-  onUpdate: (config: any) => void;
-}
-
-const HouseConfigModal: React.FC<HouseConfigModalProps> = ({ isOpen, onClose, data, onUpdate }) => {
-  const [rent, setRent] = useState('');
-  const [market, setMarket] = useState('');
-  const [internet, setInternet] = useState('');
-  const [electricity, setElectricity] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setRent(data.house?.rentAmount === 0 ? '' : data.house?.rentAmount?.toString() || '');
-      setMarket(data.house?.marketBudget === 0 ? '' : data.house?.marketBudget?.toString() || '');
-      setInternet(data.house?.internetAmount === 0 ? '' : data.house?.internetAmount?.toString() || '');
-      setElectricity(data.house?.electricityBudget === 0 ? '' : data.house?.electricityBudget?.toString() || '');
-    }
-  }, [isOpen, data]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdate({
-      rentAmount: parseFloat(rent) || 0,
-      marketBudget: parseFloat(market) || 0,
-      internetAmount: parseFloat(internet) || 0,
-      electricityBudget: parseFloat(electricity) || 0,
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Casa</h2>
-          <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20">
-            <X size={20} className="text-[#13312A]" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Aluguel/Condomínio</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={rent} onChange={(e) => setRent(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Mercado & Limpeza</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={market} onChange={(e) => setMarket(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Internet (Fixo)</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={internet} onChange={(e) => setInternet(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Luz (Estimado)</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={electricity} onChange={(e) => setElectricity(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Internal Component for Partner Configuration
-interface PartnerConfigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  data: AppData;
-  onUpdate: (config: any) => void;
-}
-
-const PartnerConfigModal: React.FC<PartnerConfigModalProps> = ({ isOpen, onClose, data, onUpdate }) => {
-  const [name, setName] = useState('');
-  const [budget, setBudget] = useState('');
-  const [date, setDate] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setName(data.partner?.partnerName || '');
-      setBudget(data.partner?.dateBudget === 0 ? '' : data.partner?.dateBudget?.toString() || '');
-      setDate(data.partner?.anniversaryDate || '');
-    }
-  }, [isOpen, data]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdate({
-      partnerName: name,
-      dateBudget: parseFloat(budget) || 0,
-      anniversaryDate: date
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Relacionamento</h2>
-          <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20">
-            <X size={20} className="text-[#13312A]" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Nome do(a) Parceiro(a)</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Mensal (Saídas)</label>
-            <div className="relative">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span>
-               <input type="number" step="0.01" placeholder="0,00" value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Data de Aniversário (Namoro/Casamento)</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
-          </div>
-          <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Internal Component: Setup Required
+// Setup Required View
 const SetupRequiredView = ({ onRetry, onDemo }: { onRetry: () => void; onDemo: () => void }) => (
   <div className="min-h-screen bg-[#F6E9CA] flex flex-col items-center justify-center p-6 text-center animate-in fade-in">
     <div className="w-20 h-20 bg-[#C69A72]/20 text-[#C69A72] rounded-[2rem] flex items-center justify-center mb-6 shadow-sm">
@@ -421,7 +202,96 @@ const SetupRequiredView = ({ onRetry, onDemo }: { onRetry: () => void; onDemo: (
   </div>
 );
 
+// HOOK: Detect Mobile
+const useMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    return isMobile;
+};
+
+// ... Config Modals (CarConfigModal, HouseConfigModal, PartnerConfigModal) ...
+// Keeping them here for completeness but they are unchanged from previous version.
+const CarConfigModal: React.FC<{ isOpen: boolean; onClose: () => void; data: AppData; onUpdate: (config: any) => void; }> = ({ isOpen, onClose, data, onUpdate }) => {
+    const [model, setModel] = useState('');
+    const [ipva, setIpva] = useState('');
+    const [insurance, setInsurance] = useState('');
+    const [plate, setPlate] = useState('');
+  
+    useEffect(() => {
+      if (isOpen) {
+        setModel(data.car?.modelName || '');
+        setIpva(data.car?.ipvaTotal === 0 ? '' : data.car?.ipvaTotal?.toString() || '');
+        setInsurance(data.car?.insuranceTotal === 0 ? '' : data.car?.insuranceTotal?.toString() || '');
+        setPlate(data.car?.plateLastDigit || '');
+      }
+    }, [isOpen, data]);
+  
+    if (!isOpen) return null;
+  
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      onUpdate({
+        modelName: model,
+        ipvaTotal: parseFloat(ipva) || 0,
+        insuranceTotal: parseFloat(insurance) || 0,
+        licensingTotal: data.car?.licensingTotal || 0,
+        plateLastDigit: plate
+      });
+      onClose();
+    };
+  
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+        <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Veículo</h2>
+            <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20">
+              <X size={20} className="text-[#13312A]" />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Modelo</label>
+              <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" />
+            </div>
+            {/* Other inputs */}
+            <div><label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Total IPVA (Anual)</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span><input type="number" step="0.01" placeholder="0,00" value={ipva} onChange={(e) => setIpva(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /></div></div>
+            <div><label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Seguro (Anual)</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span><input type="number" step="0.01" placeholder="0,00" value={insurance} onChange={(e) => setInsurance(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /></div></div>
+            <div><label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Final da Placa</label><input type="text" maxLength={1} value={plate} onChange={(e) => setPlate(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none text-center" /></div>
+            <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button>
+          </form>
+        </div>
+      </div>
+    );
+}
+
+const HouseConfigModal: React.FC<{ isOpen: boolean; onClose: () => void; data: AppData; onUpdate: (config: any) => void; }> = ({ isOpen, onClose, data, onUpdate }) => {
+    const [rent, setRent] = useState('');
+    const [market, setMarket] = useState('');
+    const [internet, setInternet] = useState('');
+    const [electricity, setElectricity] = useState('');
+    useEffect(() => { if (isOpen) { setRent(data.house?.rentAmount === 0 ? '' : data.house?.rentAmount?.toString() || ''); setMarket(data.house?.marketBudget === 0 ? '' : data.house?.marketBudget?.toString() || ''); setInternet(data.house?.internetAmount === 0 ? '' : data.house?.internetAmount?.toString() || ''); setElectricity(data.house?.electricityBudget === 0 ? '' : data.house?.electricityBudget?.toString() || ''); } }, [isOpen, data]);
+    if (!isOpen) return null;
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onUpdate({ rentAmount: parseFloat(rent) || 0, marketBudget: parseFloat(market) || 0, internetAmount: parseFloat(internet) || 0, electricityBudget: parseFloat(electricity) || 0, }); onClose(); };
+    return ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4"> <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]"> <div className="flex justify-between items-center mb-6"> <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Casa</h2> <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20"> <X size={20} className="text-[#13312A]" /> </button> </div> <form onSubmit={handleSubmit} className="space-y-4"> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Aluguel/Condomínio</label> <div className="relative"> <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span> <input type="number" step="0.01" placeholder="0,00" value={rent} onChange={(e) => setRent(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> </div> {/* ... other inputs ... */} <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Mercado & Limpeza</label> <div className="relative"> <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span> <input type="number" step="0.01" placeholder="0,00" value={market} onChange={(e) => setMarket(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> </div> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Valor Internet (Fixo)</label> <div className="relative"> <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span> <input type="number" step="0.01" placeholder="0,00" value={internet} onChange={(e) => setInternet(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> </div> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Luz (Estimado)</label> <div className="relative"> <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span> <input type="number" step="0.01" placeholder="0,00" value={electricity} onChange={(e) => setElectricity(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> </div> <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button> </form> </div> </div> );
+}
+
+const PartnerConfigModal: React.FC<{ isOpen: boolean; onClose: () => void; data: AppData; onUpdate: (config: any) => void; }> = ({ isOpen, onClose, data, onUpdate }) => {
+    const [name, setName] = useState('');
+    const [budget, setBudget] = useState('');
+    const [date, setDate] = useState('');
+    useEffect(() => { if (isOpen) { setName(data.partner?.partnerName || ''); setBudget(data.partner?.dateBudget === 0 ? '' : data.partner?.dateBudget?.toString() || ''); setDate(data.partner?.anniversaryDate || ''); } }, [isOpen, data]);
+    if (!isOpen) return null;
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onUpdate({ partnerName: name, dateBudget: parseFloat(budget) || 0, anniversaryDate: date }); onClose(); };
+    return ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 p-4"> <div className="bg-[#F6E9CA] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-[#13312A]"> <div className="flex justify-between items-center mb-6"> <h2 className="text-xl font-bold text-[#13312A] font-serif">Configurar Relacionamento</h2> <button onClick={onClose} className="p-2 bg-[#13312A]/10 rounded-full hover:bg-[#C69A72]/20"> <X size={20} className="text-[#13312A]" /> </button> </div> <form onSubmit={handleSubmit} className="space-y-4"> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Nome do(a) Parceiro(a)</label> <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Orçamento Mensal (Saídas)</label> <div className="relative"> <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#155446] font-bold font-serif">R$</span> <input type="number" step="0.01" placeholder="0,00" value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> </div> <div> <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Data de Aniversário (Namoro/Casamento)</label> <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 bg-white/50 border border-[#13312A]/10 rounded-xl text-[#13312A] font-bold focus:outline-none" /> </div> <button type="submit" className="w-full py-3 bg-[#C69A72] text-[#13312A] rounded-xl font-bold mt-2 font-serif">Salvar</button> </form> </div> </div> );
+}
+
 function App() {
+  const isMobile = useMobile();
   const [session, setSession] = useState<any>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -444,9 +314,13 @@ function App() {
 
   const [prefillCategory, setPrefillCategory] = useState<CategoryKey | undefined>(undefined);
   const [prefillSubcategory, setPrefillSubcategory] = useState<string | undefined>(undefined);
+  const [prefillType, setPrefillType] = useState<'expense'|'income'>('expense');
+  const [prefillDate, setPrefillDate] = useState<string | undefined>(undefined);
+
   const [data, setData] = useState<AppData>(INITIAL_DATA);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // ... (Supabase Fetch Logic - Unchanged) ...
   useEffect(() => {
     let mounted = true;
     const checkSession = async () => {
@@ -504,7 +378,6 @@ function App() {
       const { data: trans } = await supabase.from('transactions').select('*');
       const { data: debts } = await supabase.from('debts').select('*');
       const { data: investments } = await supabase.from('investments').select('*');
-      // Fetch Fixed Expenses (Handling table not existing yet gracefully if user didn't run SQL)
       const { data: fixedExp, error: fixedError } = await supabase.from('fixed_expenses').select('*');
       
       const newData: AppData = {
@@ -566,8 +439,6 @@ function App() {
   // --- SAVE / EDIT TRANSACTIONS ---
   const handleSaveTransaction = async (dataOrArray: Transaction | Omit<Transaction, 'id'> | Omit<Transaction, 'id'>[]) => {
     const inputs = Array.isArray(dataOrArray) ? dataOrArray : [dataOrArray];
-    
-    // Check if it's an update (single item with ID)
     const isUpdate = inputs.length === 1 && 'id' in inputs[0];
 
     if (isDemoMode) {
@@ -585,19 +456,16 @@ function App() {
     }
 
     if (isUpdate) {
-        // UPDATE
         const t = inputs[0] as Transaction;
         const dbPayload = {
             type: t.type, amount: t.amount, date: t.date, category: t.category, subcategory: t.subcategory, description: t.description, is_benefit: t.isBenefit, is_salary: t.isSalary, payment_method: t.paymentMethod, car_km: t.carKm, liters: t.liters
-            // Note: Installments are usually not editable as a batch easily, so we update the single record
         };
         const { error } = await supabase.from('transactions').update(dbPayload).eq('id', t.id);
         if (error) { alert('Erro ao atualizar transação'); console.error(error); } else { fetchSupabaseData(); }
 
     } else {
-        // INSERT
         const dbPayload = inputs.map((t: any) => ({
-            user_id: session.user.id, type: t.type, amount: t.amount, date: t.date, category: t.category, subcategory: t.subcategory, description: t.description, is_benefit: t.isBenefit, is_salary: t.isSalary, payment_method: t.paymentMethod, car_km: t.carKm, liters: t.liters, installment_current: t.installmentCurrent, installment_total: t.installmentTotal
+            user_id: session.user.id, type: t.type, amount: t.amount, date: t.date, category: t.category, subcategory: t.subcategory, description: t.description, is_benefit: t.isBenefit, is_salary: t.is_salary, payment_method: t.paymentMethod, car_km: t.car_km, liters: t.liters, installment_current: t.installment_current, installment_total: t.installment_total
         }));
         const { error } = await supabase.from('transactions').insert(dbPayload);
         if (error) { alert('Erro ao salvar transação'); console.error(error); } else { fetchSupabaseData(); }
@@ -618,7 +486,7 @@ function App() {
       if (error) alert('Erro ao excluir'); else fetchSupabaseData();
   };
 
-  // --- SAVE / EDIT LOANS ---
+  // --- SAVE / EDIT LOANS --- (Unchanged)
   const handleSaveDebt = async (debtData: Debt | Omit<Debt, 'id'>) => {
     const isUpdate = 'id' in debtData;
 
@@ -633,7 +501,13 @@ function App() {
     }
 
     const payload = {
-        name: debtData.name, total_value: debtData.totalValue, installments_total: debtData.installmentsTotal, installments_paid: debtData.installmentsPaid, due_date: debtData.dueDate, category: debtData.category, installment_value: debtData.installmentValue
+        name: debtData.name, 
+        total_value: debtData.totalValue, 
+        installments_total: debtData.installmentsTotal, 
+        installments_paid: debtData.installmentsPaid, 
+        due_date: debtData.dueDate, 
+        category: debtData.category, 
+        installment_value: debtData.installmentValue
     };
 
     if (isUpdate) {
@@ -704,61 +578,116 @@ function App() {
     const { error } = await supabase.from('debts').update({ installments_paid: debt.installmentsPaid + 1 }).eq('id', id);
     if (error) alert('Erro ao atualizar parcela'); else fetchSupabaseData();
   };
-  const updateProfileConfig = async (column: string, value: any) => {
-     if (isDemoMode) return; 
-     const { error, count } = await supabase.from('profiles').update({ [column]: value }).eq('id', session.user.id);
-     if (!error && (count === null || count === 0)) {
-         await supabase.from('profiles').upsert({ id: session.user.id, user_name: session.user.email, [column]: value });
-         fetchSupabaseData(); return;
-     }
-     if (error) console.error('Failed to update profile config', error); else fetchSupabaseData();
+  
+  // Update helpers
+  const handleUpdateBalance = async (updates: { balance: number; benefit: number; ccLimit: number; ccInvoice: number; closingDay: number; dueDay: number }) => {
+      if (isDemoMode) {
+          setData(prev => ({
+              ...prev,
+              initialBalance: updates.balance,
+              initialBenefitBalance: updates.benefit,
+              creditCard: {
+                  ...prev.creditCard,
+                  limit: updates.ccLimit,
+                  initialInvoiceOffset: updates.ccInvoice,
+                  closingDate: updates.closingDay,
+                  dueDate: updates.dueDay
+              }
+          }));
+          return;
+      }
+      const { error } = await supabase.from('profiles').update({
+          initial_balance: updates.balance,
+          initial_benefit_balance: updates.benefit,
+          credit_card_config: {
+              limit: updates.ccLimit,
+              initialInvoiceOffset: updates.ccInvoice,
+              closingDate: updates.closingDay,
+              dueDate: updates.dueDay
+          }
+      }).eq('id', session.user.id);
+      if (error) alert('Erro ao salvar ajustes.');
+      else fetchSupabaseData();
   };
-  const handleUpdateBalance = async ({ balance, benefit, ccLimit, ccInvoice, closingDay, dueDay }: any) => {
-    if (isDemoMode) {
-       setData(prev => ({ ...prev, initialBalance: balance, initialBenefitBalance: benefit, creditCard: { ...prev.creditCard, limit: ccLimit, initialInvoiceOffset: ccInvoice, closingDate: closingDay, dueDate: dueDay } }));
-       return;
-    }
-    try {
-        const profileData = { initial_balance: balance, initial_benefit_balance: benefit, credit_card_config: { limit: ccLimit, initialInvoiceOffset: ccInvoice, closingDate: closingDay, dueDate: dueDay }, user_name: session.user.email };
-        const { error: updateError, data: updatedData } = await supabase.from('profiles').update(profileData).eq('id', session.user.id).select();
-        if (updateError) throw updateError;
-        if (!updatedData || updatedData.length === 0) { const { error: insertError } = await supabase.from('profiles').upsert({ id: session.user.id, ...profileData }); if (insertError) throw insertError; }
-        fetchSupabaseData();
-    } catch (error: any) { console.error('Error saving balance:', error); alert(`Erro ao salvar: ${error.message || JSON.stringify(error)}`); }
+
+  const handleUpdateCar = async (config: any) => {
+      if (isDemoMode) {
+          setData(prev => ({ ...prev, car: config }));
+          return;
+      }
+      const { error } = await supabase.from('profiles').update({ car_config: config }).eq('id', session.user.id);
+      if (error) alert('Erro ao salvar veículo.'); else fetchSupabaseData();
   };
-  const handleUpdateCar = (config: any) => { if (isDemoMode) { setData(prev => ({ ...prev, car: { ...prev.car, ...config } })); return; } updateProfileConfig('car_config', config); }
-  const handleUpdateHouse = (config: any) => { if (isDemoMode) { setData(prev => ({ ...prev, house: { ...prev.house, ...config } })); return; } updateProfileConfig('house_config', config); }
-  const handleUpdatePartner = (config: any) => { if (isDemoMode) { setData(prev => ({ ...prev, partner: { ...prev.partner, ...config } })); return; } updateProfileConfig('partner_config', config); }
-  const togglePrivacy = () => { setData(prev => ({ ...prev, showValues: !prev.showValues })); };
+
+  const handleUpdateHouse = async (config: any) => {
+      if (isDemoMode) {
+          setData(prev => ({ ...prev, house: config }));
+          return;
+      }
+      const { error } = await supabase.from('profiles').update({ house_config: config }).eq('id', session.user.id);
+      if (error) alert('Erro ao salvar casa.'); else fetchSupabaseData();
+  };
+
+  const handleUpdatePartner = async (config: any) => {
+      if (isDemoMode) {
+          setData(prev => ({ ...prev, partner: config }));
+          return;
+      }
+      const { error } = await supabase.from('profiles').update({ partner_config: config }).eq('id', session.user.id);
+      if (error) alert('Erro ao salvar relacionamento.'); else fetchSupabaseData();
+  };
+
+  const togglePrivacy = () => {
+      setData(prev => ({ ...prev, showValues: !prev.showValues }));
+  };
+
   const handleResetData = async () => {
-    if (!confirm('Deseja apagar todos os dados?')) return;
-    if (isDemoMode) { setData(INITIAL_DATA); } else {
-        await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
+    if (!confirm('Esta ação apagará todos os dados (transações, dívidas, configurações). Deseja continuar?')) return;
+    
+    if (isDemoMode) {
+        setData({ ...INITIAL_DATA, userName: 'Demo User', showValues: true });
+        return;
+    }
+
+    try {
+        // Delete dependent data first
+        await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('debts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('investments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('fixed_expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        // Reset profile
+        await supabase.from('profiles').update({
+            initial_balance: 0,
+            initial_benefit_balance: 0,
+            credit_card_config: INITIAL_DATA.creditCard,
+            car_config: INITIAL_DATA.car,
+            house_config: INITIAL_DATA.house,
+            partner_config: INITIAL_DATA.partner
+        }).eq('id', session.user.id);
+
         fetchSupabaseData();
+        alert('Dados resetados com sucesso.');
+    } catch (e) {
+        console.error(e);
+        alert('Erro ao resetar dados. Verifique o console.');
     }
-    setActiveTab('dashboard');
   };
-  const openTransactionWithPreset = (cat: CategoryKey, sub?: string) => { 
+
+  const openTransactionWithPreset = (cat: CategoryKey, sub?: string, forcedType: 'expense' | 'income' = 'expense', date?: string) => { 
       setEditingTransaction(null);
+      setPrefillType(forcedType);
       setPrefillCategory(cat); 
       setPrefillSubcategory(sub); 
+      setPrefillDate(date);
       setIsModalOpen(true); 
   }
 
   const SettingsView = ({onBack}: {onBack: () => void}) => {
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
-    const onTouchStart = (e: React.TouchEvent) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
-    const onTouchMove = (e: React.TouchEvent) => { setTouchEnd(e.targetTouches[0].clientX); };
-    const onTouchEnd = () => { if (!touchStart || !touchEnd) return; if (touchStart - touchEnd < -50) onBack(); };
-
     return (
-      <div className="pb-32 animate-in slide-in-from-right duration-300 touch-pan-y" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <div className="pb-32 animate-in slide-in-from-right duration-300">
         <div className="flex items-center gap-3 mb-6 pt-4">
-           <button onClick={onBack} className="p-2 bg-white rounded-full shadow-sm text-[#13312A] active:scale-95 transition-transform"><ArrowLeft size={20} /></button>
+           {isMobile && <button onClick={onBack} className="p-2 bg-white rounded-full shadow-sm text-[#13312A] active:scale-95 transition-transform"><ArrowLeft size={20} /></button>}
            <h2 className="text-2xl font-bold text-[#13312A] font-serif">Ajustes</h2>
         </div>
         <div className="bg-[#FFFDF5] rounded-3xl p-6 shadow-sm mb-4 border border-[#13312A]/10">
@@ -771,7 +700,6 @@ function App() {
           <button onClick={() => setIsBalanceModalOpen(true)} className="w-full py-3 bg-[#13312A]/10 text-[#13312A] rounded-xl font-bold text-sm hover:bg-[#C69A72]/20 transition-colors">Corrigir Saldos e Limites</button>
         </div>
         
-        {/* NEW: Fixed Expenses Settings */}
         <div className="bg-[#FFFDF5] rounded-3xl p-6 shadow-sm mb-4 border border-[#13312A]/10">
            <div className="flex items-start justify-between mb-4">
              <div>
@@ -797,9 +725,14 @@ function App() {
   };
 
   const renderContent = () => {
+    // If mobile and dashboard tab is active, we show the special MobileHome instead of standard Dashboard
+    if (isMobile && activeTab === 'dashboard') {
+        return <MobileHome data={data} userName={data.userName} onOpenTransaction={(t, c, s) => openTransactionWithPreset(c || 'others', s, t)} />;
+    }
+
     switch (activeTab) {
       case 'dashboard': return <Dashboard data={data} togglePrivacy={togglePrivacy} onNavigate={setActiveTab} onOpenSidebar={() => setIsSidebarOpen(true)} />;
-      case 'calendar': return <CalendarView data={data} onOpenSidebar={() => setIsSidebarOpen(true)} />;
+      case 'calendar': return <CalendarView data={data} onOpenSidebar={() => setIsSidebarOpen(true)} onAddTransaction={(date) => openTransactionWithPreset('others', undefined, 'expense', date)} />;
       case 'investments': return <InvestmentsView data={data} onAddInvestment={handleAddInvestment} onOpenSidebar={() => setIsSidebarOpen(true)} />;
       case 'cards': return <CreditCardView data={data} onOpenSettings={() => setIsBalanceModalOpen(true)} onOpenSidebar={() => setIsSidebarOpen(true)} onAddTransaction={handleSaveTransaction} onEditTransaction={handleEditTransaction} />;
       case 'loans': return <LoanView debts={data.debts} onOpenAddLoan={() => { setEditingDebt(null); setIsLoanModalOpen(true); }} onPayInstallment={handlePayInstallment} onOpenSidebar={() => setIsSidebarOpen(true)} onEditDebt={handleEditDebt} />;
@@ -816,35 +749,80 @@ function App() {
   if (!session) return <LoginView onLoginSuccess={handleMockLogin} />;
   if (dbError === 'missing_table') return <SetupRequiredView onRetry={() => window.location.reload()} onDemo={handleMockLogin} />;
 
+  // --- DESKTOP LAYOUT ---
+  if (!isMobile) {
+    return (
+      <div className="flex h-screen w-full overflow-hidden bg-[#F6E9CA] text-[#13312A] font-sans selection:bg-[#C69A72]">
+        {/* Desktop Sidebar (Fixed Width, Independent Scroll) */}
+        <div className="w-72 shrink-0 h-full border-r border-[#13312A]/10 bg-[#FFFDF5] relative z-20">
+          <Sidebar 
+            isOpen={true} 
+            onClose={() => {}} 
+            onNavigate={setActiveTab} 
+            activeTab={activeTab} 
+            userName={data.userName} 
+            onLogout={handleLogout} 
+            onOpenAdd={() => openTransactionWithPreset('others', undefined, 'expense')} 
+          />
+        </div>
+        
+        {/* Main Content Area (Independent Scroll) */}
+        <main className="flex-1 h-full overflow-y-auto relative z-10 scroll-smooth">
+           <div className="p-6 md:p-8 min-h-full">
+              {renderContent()}
+           </div>
+        </main>
+
+        {/* Modals (Fixed on screen) */}
+        <TransactionModal 
+            isOpen={isModalOpen} 
+            onClose={() => { setIsModalOpen(false); setEditingTransaction(null); setPrefillCategory(undefined); setPrefillSubcategory(undefined); setPrefillDate(undefined); }} 
+            onSave={handleSaveTransaction} 
+            onDelete={handleDeleteTransaction}
+            initialCategory={prefillCategory} 
+            initialSubcategory={prefillSubcategory} 
+            initialData={editingTransaction}
+            initialType={prefillType}
+            initialDate={prefillDate}
+        />
+        {/* ... Other modals same as mobile ... */}
+        <BalanceAdjustmentModal isOpen={isBalanceModalOpen} onClose={() => setIsBalanceModalOpen(false)} data={data} onUpdate={handleUpdateBalance} />
+        <LoanModal isOpen={isLoanModalOpen} onClose={() => { setIsLoanModalOpen(false); setEditingDebt(null); }} onSave={handleSaveDebt} onDelete={handleDeleteDebt} initialData={editingDebt} />
+        <FixedExpensesModal isOpen={isFixedExpenseModalOpen} onClose={() => setIsFixedExpenseModalOpen(false)} fixedExpenses={data.fixedExpenses} onAdd={handleAddFixedExpense} onDelete={handleDeleteFixedExpense} />
+        <CarConfigModal isOpen={isCarConfigOpen} onClose={() => setIsCarConfigOpen(false)} data={data} onUpdate={handleUpdateCar} />
+        <HouseConfigModal isOpen={isHouseConfigOpen} onClose={() => setIsHouseConfigOpen(false)} data={data} onUpdate={handleUpdateHouse} />
+        <PartnerConfigModal isOpen={isPartnerConfigOpen} onClose={() => setIsPartnerConfigOpen(false)} data={data} onUpdate={handleUpdatePartner} />
+      </div>
+    );
+  }
+
+  // --- MOBILE LAYOUT (Classic) ---
   return (
     <div className="min-h-screen bg-[#F6E9CA] text-[#13312A] font-sans selection:bg-[#C69A72]">
       <main className="max-w-md mx-auto min-h-screen relative p-6">
         {renderContent()}
       </main>
 
+      {/* Navigation Bar shown on Mobile Only */}
       {['dashboard', 'cards', 'investments', 'calendar', 'settings', 'loans'].includes(activeTab) && (
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} onOpenAdd={() => openTransactionWithPreset('others')} />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={setActiveTab} activeTab={activeTab} userName={data.userName} onLogout={handleLogout} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={setActiveTab} activeTab={activeTab} userName={data.userName} onLogout={handleLogout} onOpenAdd={() => { setIsSidebarOpen(false); openTransactionWithPreset('others'); }} />
 
       <TransactionModal 
         isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setEditingTransaction(null); setPrefillCategory(undefined); setPrefillSubcategory(undefined); }} 
+        onClose={() => { setIsModalOpen(false); setEditingTransaction(null); setPrefillCategory(undefined); setPrefillSubcategory(undefined); setPrefillDate(undefined); }} 
         onSave={handleSaveTransaction} 
         onDelete={handleDeleteTransaction}
         initialCategory={prefillCategory} 
         initialSubcategory={prefillSubcategory} 
         initialData={editingTransaction}
+        initialType={prefillType}
+        initialDate={prefillDate}
       />
       <BalanceAdjustmentModal isOpen={isBalanceModalOpen} onClose={() => setIsBalanceModalOpen(false)} data={data} onUpdate={handleUpdateBalance} />
-      <LoanModal 
-        isOpen={isLoanModalOpen} 
-        onClose={() => { setIsLoanModalOpen(false); setEditingDebt(null); }} 
-        onSave={handleSaveDebt} 
-        onDelete={handleDeleteDebt}
-        initialData={editingDebt}
-      />
+      <LoanModal isOpen={isLoanModalOpen} onClose={() => { setIsLoanModalOpen(false); setEditingDebt(null); }} onSave={handleSaveDebt} onDelete={handleDeleteDebt} initialData={editingDebt} />
       <FixedExpensesModal isOpen={isFixedExpenseModalOpen} onClose={() => setIsFixedExpenseModalOpen(false)} fixedExpenses={data.fixedExpenses} onAdd={handleAddFixedExpense} onDelete={handleDeleteFixedExpense} />
       <CarConfigModal isOpen={isCarConfigOpen} onClose={() => setIsCarConfigOpen(false)} data={data} onUpdate={handleUpdateCar} />
       <HouseConfigModal isOpen={isHouseConfigOpen} onClose={() => setIsHouseConfigOpen(false)} data={data} onUpdate={handleUpdateHouse} />

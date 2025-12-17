@@ -15,40 +15,14 @@ interface CarViewProps {
 export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, onQuickAdd, onOpenSidebar, onEditTransaction }) => {
   const { transactions, car } = data;
 
-  // --- Gesture Logic ---
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isRightSwipe = distance < -minSwipeDistance;
-    if (isRightSwipe) {
-      onBack();
-    }
-  };
-  // ---------------------
-
   const carTransactions = transactions
     .filter(t => t.category === 'car' && t.type === 'expense')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Find latest KM
+  // Data Logic
   const lastKmTrans = carTransactions.find(t => t.carKm);
   const currentKm = lastKmTrans?.carKm || 0;
 
-  // Monthly Spending
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -59,7 +33,6 @@ export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, 
     })
     .reduce((acc, t) => acc + t.amount, 0);
 
-  // Taxes Progress (Annual)
   const calculateTotalPaidInYear = (subMatch: string) => {
     return carTransactions
       .filter(t => t.subcategory && t.subcategory.includes(subMatch))
@@ -69,7 +42,6 @@ export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, 
 
   const ipvaPaid = calculateTotalPaidInYear('IPVA');
   const insurancePaid = calculateTotalPaidInYear('Seguro');
-
   const ipvaProgress = car.ipvaTotal > 0 ? (ipvaPaid / car.ipvaTotal) * 100 : 0;
   const insuranceProgress = car.insuranceTotal > 0 ? (insurancePaid / car.insuranceTotal) * 100 : 0;
 
@@ -82,22 +54,17 @@ export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, 
   };
 
   return (
-    <div 
-        className="pb-32 animate-in slide-in-from-right duration-300 relative min-h-screen touch-pan-y"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-    >
+    <div className="pb-32 animate-in slide-in-from-right duration-300 relative min-h-screen">
       
-      {/* FAB for Quick Add */}
+      {/* FAB */}
       <button 
         onClick={() => onQuickAdd('')} 
-        className="fixed bottom-8 right-6 w-14 h-14 bg-[#162660] text-white rounded-full shadow-xl shadow-blue-900/30 flex items-center justify-center z-50 active:scale-90 transition-transform hover:bg-[#1e3a8a]"
+        className="fixed bottom-8 right-6 w-14 h-14 bg-[#162660] text-white rounded-full shadow-xl shadow-blue-900/30 flex items-center justify-center z-50 active:scale-90 transition-transform hover:bg-[#1e3a8a] md:hidden"
       >
         <Plus size={32} />
       </button>
 
-      {/* Header with Navigation */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6 pt-4">
          <div className="flex items-center gap-3">
             <button onClick={onBack} className="p-2 bg-white rounded-full text-gray-500 hover:text-[#162660] shadow-sm">
@@ -105,155 +72,138 @@ export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, 
             </button>
             <h2 className="text-2xl font-bold text-[#162660]">Meu Veículo</h2>
          </div>
-         <button onClick={onOpenSettings} className="p-2 bg-white rounded-full text-gray-400 hover:text-[#162660] shadow-sm">
-            <Settings size={20} />
-         </button>
-      </div>
-
-      <div className="mb-6">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1 ml-1">{car.modelName || 'Carro Principal'}</h3>
-        <p className="text-xs text-gray-400 ml-1">Placa final {car.plateLastDigit || '?'}</p>
-      </div>
-
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-         {/* Odometer */}
-         <div className="bg-[#162660] p-5 rounded-3xl text-white relative overflow-hidden">
-            <Gauge size={24} className="mb-6 text-blue-300" />
-            <p className="text-xs text-blue-200 mb-1">Odômetro</p>
-            <p className="text-2xl font-bold tracking-tight">{currentKm > 0 ? `${(currentKm/1000).toFixed(0)}k` : '0'} <span className="text-sm font-normal text-blue-300">km</span></p>
+         <div className="flex gap-2">
+            <button onClick={() => onQuickAdd('')} className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#162660] text-white rounded-xl text-sm font-bold hover:bg-[#1e3a8a]">
+               <Plus size={16} /> Novo Gasto
+            </button>
+            <button onClick={onOpenSettings} className="p-2 bg-white rounded-full text-gray-400 hover:text-[#162660] shadow-sm">
+               <Settings size={20} />
+            </button>
          </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-6">
          
-         {/* Monthly Spend */}
-         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
-                <Settings size={20} />
-            </div>
-            <div>
-                <p className="text-xs text-gray-400 mb-1">Gasto (Mês)</p>
-                <p className="text-xl font-bold text-[#162660]">{formatCurrency(monthlySpend)}</p>
-            </div>
-         </div>
-      </div>
+         {/* 1. Dashboard Hero (KM & Model) - Span 12 on mobile, 8 on desktop */}
+         <div className="col-span-12 md:col-span-8 bg-[#162660] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-900/20">
+             <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+             
+             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                 <div>
+                     <div className="flex items-center gap-2 mb-2 opacity-80">
+                         <Settings size={18} />
+                         <span className="text-sm font-bold uppercase tracking-wider">{car.modelName || 'Carro Principal'}</span>
+                     </div>
+                     <h3 className="text-5xl font-bold font-mono tracking-tighter">
+                         {currentKm > 0 ? (currentKm/1000).toFixed(0) : '0'}
+                         <span className="text-2xl text-blue-300 ml-1">k km</span>
+                     </h3>
+                     <p className="text-xs text-blue-200 mt-2">Placa Final: {car.plateLastDigit || '?'}</p>
+                 </div>
 
-      {/* Quick Actions - Updated to rounded-3xl */}
-      <div className="mb-8">
-         <h3 className="font-bold text-[#162660] mb-3 px-1">Lançamento Rápido</h3>
-         <div className="grid grid-cols-3 gap-3">
-            <button onClick={() => onQuickAdd('Combustível')} className="flex flex-col items-center gap-2 p-4 bg-white rounded-3xl shadow-sm border border-gray-50 active:scale-95 transition-transform hover:bg-blue-50/50">
-               <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-                  <Fuel size={20} />
-               </div>
-               <span className="text-xs font-bold text-gray-600">Abastecer</span>
-            </button>
-            <button onClick={() => onQuickAdd('Manutenção')} className="flex flex-col items-center gap-2 p-4 bg-white rounded-3xl shadow-sm border border-gray-50 active:scale-95 transition-transform hover:bg-blue-50/50">
-               <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
-                  <Wrench size={20} />
-               </div>
-               <span className="text-xs font-bold text-gray-600">Oficina</span>
-            </button>
-            <button onClick={() => onQuickAdd('IPVA')} className="flex flex-col items-center gap-2 p-4 bg-white rounded-3xl shadow-sm border border-gray-50 active:scale-95 transition-transform hover:bg-blue-50/50">
-               <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                  <FileText size={20} />
-               </div>
-               <span className="text-xs font-bold text-gray-600">Imposto</span>
-            </button>
-         </div>
-      </div>
-
-      {/* Taxes & Annual Costs */}
-      <div className="mb-8 space-y-4">
-         <h3 className="font-bold text-[#162660] px-1">Metas Anuais</h3>
-         
-         {/* IPVA Widget */}
-         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50">
-            <div className="flex justify-between items-center mb-3">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                     <FileText size={18} />
-                  </div>
-                  <div>
-                     <p className="text-sm font-bold text-[#162660]">IPVA {currentYear}</p>
-                     <p className="text-xs text-gray-400">Total: {formatCurrency(car.ipvaTotal)}</p>
-                  </div>
-               </div>
-               <span className="text-xs font-bold text-indigo-600">{ipvaProgress.toFixed(0)}% Pago</span>
-            </div>
-            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
-               <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(ipvaProgress, 100)}%` }}></div>
-            </div>
-            <p className="text-xs text-gray-400 text-right">Falta: {formatCurrency(Math.max(car.ipvaTotal - ipvaPaid, 0))}</p>
+                 <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm min-w-[160px]">
+                     <p className="text-xs text-blue-200 mb-1">Gasto (Mês Atual)</p>
+                     <p className="text-2xl font-bold">{formatCurrency(monthlySpend)}</p>
+                 </div>
+             </div>
          </div>
 
-         {/* Insurance Widget */}
-         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50">
-            <div className="flex justify-between items-center mb-3">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                     <ShieldCheck size={18} />
-                  </div>
-                  <div>
-                     <p className="text-sm font-bold text-[#162660]">Seguro Auto</p>
-                     <p className="text-xs text-gray-400">Total: {formatCurrency(car.insuranceTotal)}</p>
-                  </div>
-               </div>
-               <span className="text-xs font-bold text-emerald-600">{insuranceProgress.toFixed(0)}% Pago</span>
-            </div>
-            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
-               <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(insuranceProgress, 100)}%` }}></div>
-            </div>
-            <p className="text-xs text-gray-400 text-right">Falta: {formatCurrency(Math.max(car.insuranceTotal - insurancePaid, 0))}</p>
+         {/* 2. Quick Actions (Span 12 mobile, 4 desktop) */}
+         <div className="col-span-12 md:col-span-4 flex flex-col gap-3">
+             <button onClick={() => onQuickAdd('Combustível')} className="flex-1 bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                 <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Fuel size={24} />
+                 </div>
+                 <div className="text-left">
+                     <p className="font-bold text-[#162660]">Abastecer</p>
+                     <p className="text-xs text-gray-400">Registrar combustível</p>
+                 </div>
+             </button>
+             <button onClick={() => onQuickAdd('Manutenção')} className="flex-1 bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
+                 <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Wrench size={24} />
+                 </div>
+                 <div className="text-left">
+                     <p className="font-bold text-[#162660]">Oficina</p>
+                     <p className="text-xs text-gray-400">Registrar manutenção</p>
+                 </div>
+             </button>
          </div>
-      </div>
 
-      {/* Recent History */}
-      <h3 className="text-[#162660] font-bold text-lg mb-4 px-1">Histórico Recente</h3>
-      <div className="space-y-3">
-        {carTransactions.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">Nenhum registro encontrado.</div>
-        ) : (
-          carTransactions.slice(0, 5).map((t) => {
-            const sub = t.subcategory || '';
-            const Icon = getSubIcon(sub);
-            const isPreventive = sub.includes('Preventiva') || sub.includes('Manutenção');
-            const isFuel = sub.includes('Combustível');
+         {/* 3. Taxes Progress (Span 6 each) */}
+         <div className="col-span-12 md:col-span-6 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+             <div className="flex justify-between items-center mb-4">
+                 <div className="flex items-center gap-3">
+                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                         <FileText size={20} />
+                     </div>
+                     <span className="font-bold text-[#162660]">IPVA {currentYear}</span>
+                 </div>
+                 <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{ipvaProgress.toFixed(0)}% Pago</span>
+             </div>
+             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
+                 <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(ipvaProgress, 100)}%` }}></div>
+             </div>
+             <div className="flex justify-between text-xs text-gray-400">
+                 <span>Pago: {formatCurrency(ipvaPaid)}</span>
+                 <span>Total: {formatCurrency(car.ipvaTotal)}</span>
+             </div>
+         </div>
 
-            return (
-              <div 
-                key={t.id} 
-                className={`p-4 rounded-3xl flex items-center gap-4 transition-all bg-white shadow-sm border border-gray-50`}
-              >
-                <div 
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                    isPreventive ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-600'
-                  }`}
-                >
-                  <Icon size={18} />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-[#162660] text-sm truncate">{sub || 'Geral'}</h4>
-                    <span className="font-bold text-[#162660] text-sm">{formatCurrency(t.amount)}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                     <p className="text-xs text-gray-400">{formatDate(t.date)}</p>
-                     {isFuel && t.liters && (
-                        <div className="text-[10px] font-medium text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">
-                           {t.liters}L
-                        </div>
-                     )}
-                  </div>
-                </div>
-                
-                {/* Edit Button */}
-                <button onClick={() => onEditTransaction(t)} className="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-100 hover:text-[#162660]">
-                    <Edit3 size={16} />
-                </button>
-              </div>
-            );
-          })
-        )}
+         <div className="col-span-12 md:col-span-6 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+             <div className="flex justify-between items-center mb-4">
+                 <div className="flex items-center gap-3">
+                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                         <ShieldCheck size={20} />
+                     </div>
+                     <span className="font-bold text-[#162660]">Seguro Auto</span>
+                 </div>
+                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">{insuranceProgress.toFixed(0)}% Pago</span>
+             </div>
+             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
+                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(insuranceProgress, 100)}%` }}></div>
+             </div>
+             <div className="flex justify-between text-xs text-gray-400">
+                 <span>Pago: {formatCurrency(insurancePaid)}</span>
+                 <span>Total: {formatCurrency(car.insuranceTotal)}</span>
+             </div>
+         </div>
+
+         {/* 4. History Table (Span 12) */}
+         <div className="col-span-12 bg-[#FFFDF5] rounded-[2.5rem] p-6 border border-gray-100 shadow-sm">
+             <h3 className="font-bold text-[#162660] mb-4">Histórico Recente</h3>
+             <div className="space-y-3">
+                {carTransactions.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">Nenhum registro encontrado.</div>
+                ) : (
+                  carTransactions.slice(0, 5).map((t) => {
+                    const sub = t.subcategory || '';
+                    const Icon = getSubIcon(sub);
+                    const isFuel = sub.includes('Combustível');
+                    return (
+                      <div key={t.id} className="flex items-center justify-between p-4 bg-white border border-gray-50 rounded-2xl hover:bg-gray-50 transition-colors">
+                         <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center">
+                                 <Icon size={18} />
+                             </div>
+                             <div>
+                                 <p className="font-bold text-[#162660] text-sm">{sub || 'Geral'}</p>
+                                 <p className="text-xs text-gray-400">{formatDate(t.date)} {isFuel && t.liters && `• ${t.liters}L`}</p>
+                             </div>
+                         </div>
+                         <div className="flex items-center gap-3">
+                             <span className="font-bold text-[#162660]">{formatCurrency(t.amount)}</span>
+                             <button onClick={() => onEditTransaction(t)} className="p-2 text-gray-300 hover:text-[#162660]">
+                                 <Edit3 size={16} />
+                             </button>
+                         </div>
+                      </div>
+                    );
+                  })
+                )}
+             </div>
+         </div>
+
       </div>
     </div>
   );

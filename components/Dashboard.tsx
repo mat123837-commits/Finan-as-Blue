@@ -1,8 +1,8 @@
 import React from 'react';
-import { Eye, EyeOff, Menu, Wallet, BarChart3, CreditCard, Landmark, TrendingUp, Home, Car, Heart, Ticket, CalendarClock, PieChart } from 'lucide-react';
-import { ResponsiveContainer, XAxis, BarChart, Bar, Tooltip as RechartsTooltip, CartesianGrid, Cell } from 'recharts';
-import { AppData } from '../types';
-import { COLORS, formatCurrency } from '../constants';
+import { Eye, EyeOff, Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft, Calendar, CreditCard, Home, Car, Heart, Search, Filter, Activity } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, BarChart, Bar, Cell } from 'recharts';
+import { AppData, Transaction } from '../types';
+import { formatCurrency, formatDate, COLORS } from '../constants';
 
 interface DashboardProps {
   data: AppData;
@@ -11,19 +11,16 @@ interface DashboardProps {
   onOpenSidebar: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNavigate, onOpenSidebar }) => {
-  const { transactions, showValues, userName, debts, fixedExpenses } = data;
+export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNavigate }) => {
+  const { transactions, showValues, userName } = data;
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const isInCurrentMonth = (dateStr: string) => {
-    const [year, month] = dateStr.split('-').map(Number);
-    return year === currentYear && (month - 1) === currentMonth;
-  };
-
-  // --- 1. CALCULO DE SALDOS (LIQUIDEZ) ---
+  // --- CÁLCULOS PRINCIPAIS ---
+  
+  // 1. Saldos (Geral / Acumulado)
   const totalIncome = transactions
     .filter(t => t.type === 'income' && !t.isBenefit)
     .reduce((acc, curr) => acc + curr.amount, 0);
@@ -32,362 +29,378 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
     .filter(t => t.type === 'expense' && t.paymentMethod !== 'credit')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  // Saldo em Conta Real (Sem Benefícios)
   const netBalance = totalIncome - totalExpensesDebit + (data.initialBalance || 0);
-
-  // Saldo Benefícios (Separado)
+  
   const benefitIncome = transactions
     .filter(t => t.type === 'income' && t.isBenefit)
     .reduce((acc, curr) => acc + curr.amount, 0);
   const benefitBalance = benefitIncome + (data.initialBenefitBalance || 0);
 
-  // --- 2. CARTÃO DE CRÉDITO ---
+  // 2. Fatura Atual
   const creditExpensesCurrentMonth = transactions
-    .filter(t => t.type === 'expense' && t.paymentMethod === 'credit' && isInCurrentMonth(t.date))
+    .filter(t => t.type === 'expense' && t.paymentMethod === 'credit')
+    .filter(t => {
+       const d = new Date(t.date);
+       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
     .reduce((acc, t) => acc + t.amount, 0);
   
   const currentInvoiceValue = creditExpensesCurrentMonth + (data.creditCard?.initialInvoiceOffset || 0);
   const creditLimit = data.creditCard?.limit || 0;
-  
-  // Future credit usage
-  const allFutureCredit = transactions
-     .filter(t => t.type === 'expense' && t.paymentMethod === 'credit' && new Date(t.date) >= new Date(currentYear, currentMonth, 1))
-     .reduce((acc, t) => acc + t.amount, 0);
-  const limitUsed = (data.creditCard?.initialInvoiceOffset || 0) + allFutureCredit;
-  const limitPercent = creditLimit > 0 ? (limitUsed / creditLimit) * 100 : 0;
+  const limitPercent = creditLimit > 0 ? (currentInvoiceValue / creditLimit) * 100 : 0;
 
-  // --- 3. EMPRÉSTIMOS (MENSAL) ---
-  const monthlyLoanCommitment = debts.reduce((acc, debt) => {
-    if (debt.installmentsPaid >= debt.installmentsTotal) return acc;
-    return acc + (debt.installmentValue || (debt.totalValue / debt.installmentsTotal));
-  }, 0);
-  const activeLoansCount = debts.filter(d => d.installmentsPaid < d.installmentsTotal).length;
-
-  // --- 4. GASTOS FIXOS INTELIGENTES (SMART RECURRING) ---
-  const pendingFixedExpenses = (fixedExpenses || []).reduce((acc, expense) => {
-    const isPaid = transactions.some(t => {
-       if (!isInCurrentMonth(t.date) || t.type !== 'expense') return false;
-       const margin = expense.amount * 0.01;
-       const diff = Math.abs(t.amount - expense.amount);
-       return diff <= margin;
-    });
-    return isPaid ? acc : acc + expense.amount;
-  }, 0);
-
-  // --- 5. LÓGICA DE PREVISÃO DE LIQUIDEZ ---
-  const rentPaid = transactions
-    .filter(t => t.category === 'house' && (t.subcategory || '').includes('Aluguel') && isInCurrentMonth(t.date))
+  // 3. Previsão (Liquidez)
+  // Renda do Mês Atual (para cálculo de comprometimento)
+  const monthlyRealizedIncome = transactions
+    .filter(t => t.type === 'income' && !t.isBenefit && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
     .reduce((acc, t) => acc + t.amount, 0);
+
+  const pendingFixedExpenses = (data.fixedExpenses || []).reduce((acc, expense) => acc + expense.amount, 0); 
   
-  const pendingRent = Math.max(0, (data.house?.rentAmount || 0) - rentPaid);
+  // Liquidez Livre: Dinheiro em conta hoje - Contas a Pagar (Fatura + Fixos)
+  const forecastedFreeBalance = netBalance - currentInvoiceValue - pendingFixedExpenses;
   
-  // Forecast
-  const forecastedFreeBalance = netBalance - currentInvoiceValue - pendingRent - monthlyLoanCommitment - pendingFixedExpenses;
-  const isForecastNegative = forecastedFreeBalance < 0;
+  // Comprometimento: (Fatura + Fixos) / Renda do Mês (se houver renda, senão 0 ou N/A)
+  const totalCommitted = currentInvoiceValue + pendingFixedExpenses;
+  const commitmentRate = monthlyRealizedIncome > 0 ? (totalCommitted / monthlyRealizedIncome) * 100 : 0;
 
-  // --- CHART DATA FOR LIQUIDITY ---
-  const liquidityChartData = [
-      { name: 'Fatura', value: currentInvoiceValue, color: '#C69A72', labelColor: '#F6E9CA' }, // Brown
-      { name: 'Dívidas', value: monthlyLoanCommitment, color: '#9F3E34', labelColor: '#F6E9CA' }, // Muted Red
-      { name: 'Fixos', value: pendingFixedExpenses + pendingRent, color: 'rgba(246, 233, 202, 0.4)', labelColor: '#F6E9CA' }, // Translucent Cream
-      { name: 'Livre', value: Math.max(0, forecastedFreeBalance), color: '#F6E9CA', labelColor: '#13312A' } // Solid Cream
-  ].filter(item => item.value > 0);
+  // 4. Dados do Gráfico (Fluxo de Caixa - Área)
+  const chartData = Array.from({ length: 12 }).map((_, i) => {
+     const date = new Date(currentYear, i, 1);
+     const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase();
+     
+     const income = transactions
+        .filter(t => t.type === 'income' && new Date(t.date).getMonth() === i && new Date(t.date).getFullYear() === currentYear)
+        .reduce((acc, t) => acc + t.amount, 0);
+     
+     const expense = transactions
+        .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === i && new Date(t.date).getFullYear() === currentYear)
+        .reduce((acc, t) => acc + t.amount, 0);
 
-  // --- 6. DADOS PARA GRÁFICO ---
-  const trendData = Array.from({ length: 6 }).map((_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - (5 - i));
-    const month = d.getMonth();
-    const year = d.getFullYear();
-    const monthLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '');
-
-    const monthIncome = transactions
-      .filter(t => {
-        const tDate = new Date(t.date);
-        return t.type === 'income' && !t.isBenefit && tDate.getMonth() === month && tDate.getFullYear() === year;
-      })
-      .reduce((acc, t) => acc + t.amount, 0);
-
-    const monthExpense = transactions
-      .filter(t => {
-        const tDate = new Date(t.date);
-        return t.type === 'expense' && tDate.getMonth() === month && tDate.getFullYear() === year;
-      })
-      .reduce((acc, t) => acc + t.amount, 0);
-
-    return {
-      name: monthLabel,
-      Entradas: monthIncome,
-      Saídas: monthExpense
-    };
+     return { name: monthLabel, Receitas: income, Despesas: expense };
   });
 
-  // Category Progress List
-  const calculateCategoryTotal = (key: string) => 
-    transactions.filter(t => t.category === key && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  // 5. Transações Recentes (Lista)
+  const recentTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
 
-  const catProgress = [
-    { key: 'house', name: 'Casa', total: calculateCategoryTotal('house'), color: COLORS.accent },
-    { key: 'car', name: 'Carro', total: calculateCategoryTotal('car'), color: COLORS.secondary },
-    { key: 'partner', name: 'Relacionamento', total: calculateCategoryTotal('partner'), color: COLORS.danger },
-  ];
-  const maxExpense = Math.max(...catProgress.map(c => c.total), 500);
+  // 6. Totais por Categoria
+  const calcCatTotal = (key: string) => transactions.filter(t => t.category === key && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const carTotal = calcCatTotal('car');
+  const houseTotal = calcCatTotal('house');
+  const partnerTotal = calcCatTotal('partner');
 
   return (
-    <div className="pb-32 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700 min-h-full pb-10">
       
-      {/* Header - Clean iOS Style */}
-      <header className="flex justify-between items-center mb-8 pt-4">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={onOpenSidebar} 
-            className="w-10 h-10 bg-[#FFFDF5] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-[#13312A]/10 flex items-center justify-center text-[#13312A] active:scale-95 transition-all hover:bg-white/80"
-          >
-             <Menu size={20} strokeWidth={2.5} />
-          </button>
-          <div className="flex flex-col justify-center">
-            <span className="text-[10px] font-bold text-[#155446] uppercase tracking-widest leading-none mb-1">Visão Geral</span>
-            <h1 className="text-2xl font-bold text-[#13312A] leading-none font-serif">{userName}</h1>
-          </div>
-        </div>
-        <button 
-          onClick={togglePrivacy} 
-          className="w-10 h-10 bg-[#FFFDF5] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-[#13312A]/10 flex items-center justify-center text-[#13312A] active:scale-95 transition-all hover:bg-white/80"
-        >
-          {showValues ? <EyeOff size={20} strokeWidth={2.5} /> : <Eye size={20} strokeWidth={2.5} />}
-        </button>
-      </header>
-
-      {/* 1. SEPARATED BALANCE CARD (Honest View) */}
-      <section className="bg-[#13312A] rounded-[2rem] p-7 text-white shadow-xl shadow-[#13312A]/20 mb-6 relative overflow-hidden transition-transform duration-300 hover:scale-[1.01]">
-        {/* Decorative elements */}
-        <div className="absolute -right-10 -top-10 w-48 h-48 bg-[#C69A72]/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent"></div>
-        
-        {/* Main Account Balance */}
-        <div className="mb-6 relative z-10">
-          <div className="flex items-center justify-between mb-2">
-             <p className="text-[#F6E9CA] text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-               <Wallet size={14} className="text-[#C69A72]" /> Saldo Disponível
-             </p>
-             <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-lg text-[#F6E9CA] border border-white/10">Conta Corrente</span>
-          </div>
-          <h2 className="text-4xl font-bold tracking-tight text-[#F6E9CA] font-serif">
-            {showValues ? formatCurrency(netBalance) : 'R$ ••••'}
-          </h2>
-        </div>
-        
-        <div className="h-[1px] bg-gradient-to-r from-transparent via-[#C69A72]/30 to-transparent mb-4 w-full"></div>
-
-        {/* Benefits Balance (Separated) */}
-        <div className="relative z-10 flex items-center justify-between">
-           <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-white/5 flex items-center justify-center text-[#C69A72]">
-                 <Ticket size={18} />
-              </div>
-              <div>
-                 <p className="text-[10px] text-[#F6E9CA]/80 uppercase font-bold tracking-wide">Benefícios (VA/VR)</p>
-                 <p className="text-sm font-bold text-[#C69A72] font-serif">
-                    {showValues ? formatCurrency(benefitBalance) : '••••'}
-                 </p>
-              </div>
-           </div>
-           <div className="text-right">
-             <p className="text-[10px] text-[#F6E9CA]/60 font-medium">Saldo restrito</p>
-           </div>
-        </div>
-      </section>
-
-      {/* 2. FORECAST CARD WITH CHART */}
-      <section className="bg-[#155446] rounded-[2rem] p-6 text-white shadow-lg shadow-[#155446]/20 mb-8 relative overflow-hidden border border-[#13312A]/10">
-         <div className="absolute -left-4 -bottom-10 w-32 h-32 bg-[#C69A72]/20 rounded-full blur-2xl"></div>
+      {/* --- TOP ROW: HERO & KEY METRICS (Bento Grid) --- */}
+      <div className="grid grid-cols-12 gap-6 h-auto min-h-[180px]">
          
-         <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-               <div className="p-2 bg-[#F6E9CA]/10 rounded-xl text-[#F6E9CA]">
-                  <TrendingUp size={18} />
+         {/* 1. HERO CARD: LIQUIDEZ PREVISTA (Posição 1 - Esquerda) */}
+         <div className="col-span-12 md:col-span-5 bg-[#13312A] rounded-[2.5rem] p-8 text-[#F6E9CA] relative overflow-hidden flex flex-col justify-between shadow-xl shadow-[#13312A]/10 group transition-all hover:shadow-2xl">
+            {/* Background Decor */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#C69A72]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[#C69A72]/20 transition-all duration-700"></div>
+            
+            <div className="relative z-10">
+               <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <p className="text-sm font-medium opacity-80 flex items-center gap-2">
+                       <Activity size={16} /> Liquidez Prevista
+                    </p>
+                    <p className="text-[10px] text-[#C69A72] uppercase tracking-wider font-bold opacity-80 mt-1">Livre para gastar</p>
+                  </div>
+                  <button onClick={togglePrivacy} className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                      {showValues ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                </div>
-               <div>
-                   <h3 className="text-xs font-bold text-[#F6E9CA] uppercase tracking-widest">Previsão de Liquidez</h3>
-                   <p className="text-[10px] text-[#F6E9CA]/60">Após pagar todas as contas</p>
+               
+               <h2 className={`text-5xl font-bold font-serif tracking-tight mt-4 ${forecastedFreeBalance < 0 ? 'text-[#ff8a80]' : ''}`}>
+                  {showValues ? formatCurrency(forecastedFreeBalance) : 'R$ •••••••'}
+               </h2>
+            </div>
+
+            <div className="relative z-10 mt-6">
+               <div className="flex justify-between text-xs font-bold text-[#F6E9CA] mb-2 opacity-80">
+                  <span>Renda Comprometida</span>
+                  <span>{commitmentRate > 100 ? 100 : commitmentRate.toFixed(0)}%</span>
+               </div>
+               <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-1000 ${commitmentRate > 80 ? 'bg-[#ff8a80]' : 'bg-[#C69A72]'}`} 
+                    style={{ width: `${Math.min(commitmentRate, 100)}%` }}
+                  ></div>
+               </div>
+               <p className="text-[10px] text-[#F6E9CA]/50 mt-2 leading-tight">
+                  Calculado: Saldo atual - (Fatura Aberta + Gastos Fixos Pendentes).
+               </p>
+            </div>
+         </div>
+
+         {/* 2. SECONDARY CARD: SALDO CONTA (Posição 2 - Meio) */}
+         <div className="col-span-12 md:col-span-4 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 flex flex-col justify-between shadow-sm relative overflow-hidden">
+             <div className="absolute right-0 top-0 p-6 opacity-5 text-[#13312A]">
+                <Wallet size={100} />
+             </div>
+             
+             <div className="relative z-10">
+                <div className="flex justify-between items-start mb-2">
+                   <div>
+                      <h3 className="text-lg font-bold text-[#13312A] font-serif">Saldo em Conta</h3>
+                      <p className="text-xs text-[#155446]">Balanço atual</p>
+                   </div>
+                   <div className="p-2 rounded-full bg-[#13312A]/5 text-[#13312A]">
+                      <Wallet size={20} />
+                   </div>
+                </div>
+                
+                <h3 className="text-3xl font-bold font-serif mb-6 text-[#13312A]">
+                   {showValues ? formatCurrency(netBalance) : 'R$ ••••'}
+                </h3>
+
+                <div className="bg-[#F6E9CA]/30 p-3 rounded-2xl border border-[#13312A]/5 flex items-center justify-between">
+                   <div>
+                      <p className="text-[10px] uppercase font-bold text-[#155446]">Benefícios (VA/VR)</p>
+                      <p className="text-sm font-bold font-mono text-[#13312A]">
+                         {showValues ? formatCurrency(benefitBalance) : 'R$ ••••'}
+                      </p>
+                   </div>
+                   <div className="bg-white p-2 rounded-xl text-[#C69A72]">
+                      <Utensils size={16} />
+                   </div>
+                </div>
+             </div>
+         </div>
+
+         {/* 3. Credit Card Widget (Posição 3 - Direita) */}
+         <div 
+            onClick={() => onNavigate('cards')}
+            className="col-span-12 md:col-span-3 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden flex flex-col"
+         >
+             <div className="flex justify-between items-center mb-4 relative z-10">
+                <div className="w-10 h-10 rounded-2xl bg-[#F6E9CA] text-[#13312A] flex items-center justify-center">
+                   <CreditCard size={20} />
+                </div>
+                <span className="text-xs font-bold text-[#155446] bg-[#F6E9CA]/50 px-2 py-1 rounded-lg">
+                   Fecha dia {data.creditCard.closingDate}
+                </span>
+             </div>
+             
+             <div className="flex-1 flex flex-col justify-end relative z-10">
+                <p className="text-xs text-[#155446] font-bold uppercase mb-1">Fatura Atual</p>
+                <h3 className="text-3xl font-bold text-[#13312A] font-serif mb-4">
+                   {showValues ? formatCurrency(currentInvoiceValue) : 'R$ ••••'}
+                </h3>
+                
+                {/* Visual Limit Bar */}
+                <div className="w-full bg-[#F6E9CA] h-3 rounded-full overflow-hidden">
+                   <div 
+                     className={`h-full rounded-full transition-all duration-1000 ${limitPercent > 90 ? 'bg-[#9F3E34]' : 'bg-[#13312A]'}`} 
+                     style={{ width: `${Math.min(limitPercent, 100)}%` }}
+                   ></div>
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] font-bold text-[#155446]/60">
+                   <span>0%</span>
+                   <span>{limitPercent.toFixed(0)}%</span>
+                </div>
+             </div>
+         </div>
+
+      </div>
+
+      {/* --- MIDDLE ROW: MAIN CHART & CATEGORIES --- */}
+      <div className="grid grid-cols-12 gap-6">
+         
+         {/* 1. Main Cash Flow Chart (Large Area) */}
+         <div className="col-span-12 md:col-span-8 bg-white rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm min-h-[400px] flex flex-col">
+            <div className="flex justify-between items-center mb-8">
+               <h3 className="text-2xl font-bold text-[#13312A] font-serif">Evolução Financeira</h3>
+               <div className="flex gap-2">
+                  <span className="flex items-center gap-1 text-xs font-bold text-[#155446]">
+                     <span className="w-2 h-2 rounded-full bg-[#155446]"></span> Receitas
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-bold text-[#9F3E34]">
+                     <span className="w-2 h-2 rounded-full bg-[#9F3E34]"></span> Despesas
+                  </span>
                </div>
             </div>
             
-            <div className="flex items-end justify-between mb-6">
-               {isForecastNegative ? (
-                   <div className="bg-[#9F3E34] px-4 py-2 rounded-2xl shadow-sm inline-block border border-[#F6E9CA]/20">
-                       <p className="text-3xl font-bold font-serif text-[#F6E9CA]">
-                          {showValues ? formatCurrency(forecastedFreeBalance) : 'R$ ••••'}
-                       </p>
-                   </div>
-               ) : (
-                   <p className="text-4xl font-bold font-serif text-[#F6E9CA]">
-                      {showValues ? formatCurrency(forecastedFreeBalance) : 'R$ ••••'}
-                   </p>
-               )}
-            </div>
-
-            {/* NEW: Liquidity Breakdown Chart */}
-            <div className="h-32 w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={liquidityChartData} margin={{ top: 15, right: 0, left: 0, bottom: 0 }}>
-                        <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fill: '#F6E9CA', fontWeight: 600, opacity: 0.7 }} 
-                            dy={5}
-                            interval={0}
-                        />
-                         <RechartsTooltip 
-                            cursor={{ fill: 'transparent' }}
-                            contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#F6E9CA', color: '#13312A', fontSize: '12px', fontWeight: 'bold' }}
-                            formatter={(value: number) => [formatCurrency(value), '']}
-                            itemStyle={{ color: '#13312A' }}
-                         />
-                        <Bar dataKey="value" radius={[6, 6, 6, 6]} barSize={32}>
-                            {liquidityChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
+            <div className="flex-1">
+               <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                     <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="5%" stopColor="#155446" stopOpacity={0.1}/>
+                           <stop offset="95%" stopColor="#155446" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="5%" stopColor="#9F3E34" stopOpacity={0.1}/>
+                           <stop offset="95%" stopColor="#9F3E34" stopOpacity={0}/>
+                        </linearGradient>
+                     </defs>
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                     <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#9CA3AF', fontSize: 12, fontWeight: 500 }} 
+                        dy={10}
+                     />
+                     <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+                        tickFormatter={(val) => `R$${val/1000}k`}
+                     />
+                     <RechartsTooltip 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                        formatter={(val: number) => formatCurrency(val)}
+                     />
+                     <Area type="monotone" dataKey="Receitas" stroke="#155446" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                     <Area type="monotone" dataKey="Despesas" stroke="#9F3E34" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                  </AreaChart>
+               </ResponsiveContainer>
             </div>
          </div>
-      </section>
 
-      {/* 3. LIABILITIES GRID (Cards & Loans) */}
-      <section className="grid grid-cols-2 gap-3 mb-8">
-        
-        {/* Credit Card Widget */}
-        <div 
-            onClick={() => onNavigate('cards')} 
-            className="bg-[#FFFDF5] border border-[#13312A]/10 rounded-3xl p-5 shadow-sm active:bg-[#F6E9CA] transition-all hover:shadow-md cursor-pointer flex flex-col justify-between"
-        >
-            <div className="flex justify-between items-start mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-[#F6E9CA] text-[#13312A] flex items-center justify-center">
-                    <CreditCard size={20} />
-                </div>
-                <div className="text-right">
-                   <span className="text-[10px] font-bold text-[#155446] uppercase tracking-wider">Fatura</span>
-                </div>
-            </div>
-            <div>
-                <p className="text-lg font-bold text-[#13312A] truncate font-serif">
-                   {showValues ? formatCurrency(currentInvoiceValue) : '••••'}
-                </p>
-                <div className="w-full bg-[#F6E9CA] h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-[#13312A] rounded-full" style={{ width: `${Math.min(limitPercent, 100)}%` }}></div>
-                </div>
-                <p className="text-[10px] text-[#155446] mt-1 font-medium">{limitPercent.toFixed(0)}% do limite</p>
-            </div>
-        </div>
-
-        {/* Loans Widget */}
-        <div 
-            onClick={() => onNavigate('loans')} 
-            className="bg-[#FFFDF5] border border-[#13312A]/10 rounded-3xl p-5 shadow-sm active:bg-[#F6E9CA] transition-all hover:shadow-md cursor-pointer flex flex-col justify-between"
-        >
-             <div className="flex justify-between items-start mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-[#F6E9CA] text-[#155446] flex items-center justify-center">
-                    <Landmark size={20} />
-                </div>
-                <div className="text-right">
-                   <span className="text-[10px] font-bold text-[#155446] uppercase tracking-wider">Mensal</span>
-                </div>
-            </div>
-            <div>
-                <p className="text-lg font-bold text-[#13312A] truncate font-serif">
-                   {showValues ? formatCurrency(monthlyLoanCommitment) : '••••'}
-                </p>
-                <div className="flex items-center gap-1 mt-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C69A72]"></span>
-                    <p className="text-[10px] text-[#155446] font-medium">{activeLoansCount} contratos ativos</p>
-                </div>
-            </div>
-        </div>
-
-      </section>
-
-      {/* 4. TREND CHART (6 Months) */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-4 px-2">
-           <h3 className="font-bold text-[#13312A] flex items-center gap-2 font-serif">
-             <BarChart3 size={18} /> Evolução Semestral
-           </h3>
-           <span className="text-[10px] text-[#155446] font-medium">Últimos 6 meses</span>
-        </div>
-        
-        <div className="bg-[#FFFDF5] p-4 rounded-3xl shadow-sm h-48 w-full border border-[#13312A]/10">
-           <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F6E9CA" />
-                 <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 10, fill: '#155446', fontWeight: 600 }} 
-                    dy={10}
-                 />
-                 <RechartsTooltip 
-                    cursor={{ fill: '#F6E9CA' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: '#13312A', backgroundColor: '#FFFDF5' }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
-                 />
-                 <Bar dataKey="Entradas" fill="#155446" radius={[4, 4, 0, 0]} barSize={8} />
-                 <Bar dataKey="Saídas" fill="#9F3E34" radius={[4, 4, 0, 0]} barSize={8} />
-              </BarChart>
-           </ResponsiveContainer>
-        </div>
-      </section>
-
-      {/* Categories Summary List */}
-      <section>
-        <h3 className="text-[#13312A] font-bold text-lg mb-4 px-2 font-serif">Categorias Principais</h3>
-        <div className="space-y-4">
-          {catProgress.map((cat) => {
-            const percent = Math.min((cat.total / (maxExpense * 1.2)) * 100, 100);
-            return (
-              <div 
-                key={cat.key} 
-                onClick={() => {
-                    if (cat.key === 'car') onNavigate('car-details');
-                    if (cat.key === 'house') onNavigate('house-details');
-                    if (cat.key === 'partner') onNavigate('partner-details');
-                }}
-                className={`bg-[#FFFDF5] p-5 rounded-3xl shadow-sm flex items-center gap-4 transition-all border border-[#13312A]/10 ${['car', 'house', 'partner'].includes(cat.key) ? 'cursor-pointer active:scale-95 hover:shadow-md' : ''}`}
-              >
-                <div 
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-[#13312A]"
-                  style={{ backgroundColor: '#F6E9CA' }}
-                >
-                    {cat.key === 'house' && <Home size={20} />}
-                    {cat.key === 'car' && <Car size={20} />}
-                    {cat.key === 'partner' && <Heart size={20} />}
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex justify-between mb-2">
-                    <span className="font-semibold text-[#13312A]">{cat.name}</span>
-                    <span className="text-sm font-medium text-[#155446] font-serif">
-                      {showValues ? formatCurrency(cat.total) : '••••'}
-                    </span>
+         {/* 2. Category Highlights (Vertical Stack) */}
+         <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
+            {/* House Card */}
+            <div 
+               onClick={() => onNavigate('house-details')}
+               className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            >
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Home size={24} />
                   </div>
-                  <div className="h-3 w-full bg-[#F6E9CA] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${percent}%`, 
-                        backgroundColor: cat.color
-                      }}
-                    ></div>
+                  <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Casa</p>
+                     <p className="text-xl font-bold text-[#13312A] font-serif">{showValues ? formatCurrency(houseTotal) : '••••'}</p>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+               </div>
+            </div>
+
+            {/* Car Card */}
+            <div 
+               onClick={() => onNavigate('car-details')}
+               className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            >
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Car size={24} />
+                  </div>
+                  <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Carro</p>
+                     <p className="text-xl font-bold text-[#13312A] font-serif">{showValues ? formatCurrency(carTotal) : '••••'}</p>
+                  </div>
+               </div>
+            </div>
+
+            {/* Partner Card */}
+            <div 
+               onClick={() => onNavigate('partner-details')}
+               className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            >
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Heart size={24} />
+                  </div>
+                  <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Parceiro(a)</p>
+                     <p className="text-xl font-bold text-[#13312A] font-serif">{showValues ? formatCurrency(partnerTotal) : '••••'}</p>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+      </div>
+
+      {/* --- BOTTOM ROW: RECENT TRANSACTIONS TABLE --- */}
+      <div className="bg-white rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+             <h3 className="text-xl font-bold text-[#13312A] font-serif">Últimos Lançamentos</h3>
+             <div className="flex gap-2">
+                <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                   <Filter size={14} /> Filtrar
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                   <Search size={14} /> Buscar
+                </button>
+             </div>
+          </div>
+
+          <div className="overflow-x-auto">
+             <table className="w-full text-left border-collapse">
+                <thead>
+                   <tr className="text-xs text-gray-400 uppercase border-b border-gray-100">
+                      <th className="py-3 font-bold pl-4">Categoria</th>
+                      <th className="py-3 font-bold">Descrição</th>
+                      <th className="py-3 font-bold">Data</th>
+                      <th className="py-3 font-bold">Método</th>
+                      <th className="py-3 font-bold text-right pr-4">Valor</th>
+                   </tr>
+                </thead>
+                <tbody>
+                   {recentTransactions.map((t) => (
+                      <tr key={t.id} className="group hover:bg-[#F6E9CA]/20 transition-colors">
+                         <td className="py-4 pl-4">
+                            <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:shadow-sm transition-all">
+                                  {t.category === 'car' && <Car size={16} />}
+                                  {t.category === 'house' && <Home size={16} />}
+                                  {t.category === 'partner' && <Heart size={16} />}
+                                  {t.category === 'others' && <Wallet size={16} />}
+                                  {t.category === 'debt' && <TrendingDown size={16} />}
+                               </div>
+                               <span className="text-sm font-medium text-[#13312A] capitalize">{t.category}</span>
+                            </div>
+                         </td>
+                         <td className="py-4 text-sm text-gray-600 font-medium">
+                            {t.description || t.subcategory || 'Sem descrição'}
+                         </td>
+                         <td className="py-4 text-sm text-gray-400 font-mono">
+                            {formatDate(t.date)}
+                         </td>
+                         <td className="py-4 text-xs font-bold">
+                            <span className={`px-2 py-1 rounded-md ${t.paymentMethod === 'credit' ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                               {t.paymentMethod === 'credit' ? 'Crédito' : 'Débito'}
+                            </span>
+                         </td>
+                         <td className="py-4 pr-4 text-right">
+                            <span className={`font-bold font-mono ${t.type === 'income' ? 'text-emerald-600' : 'text-[#13312A]'}`}>
+                               {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                            </span>
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+             {recentTransactions.length === 0 && (
+                <div className="text-center py-12 text-gray-400">Nenhum lançamento encontrado.</div>
+             )}
+          </div>
+      </div>
+
     </div>
   );
 };
+
+function Utensils(props: any) {
+    return (
+        <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        >
+        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+        <path d="M7 2v20" />
+        <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+        </svg>
+    )
+}

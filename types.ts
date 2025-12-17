@@ -100,30 +100,45 @@ export const CATEGORIES: { key: CategoryKey; label: string; icon: string; subcat
     key: 'car', 
     label: 'Carro', 
     icon: 'Car', 
-    subcategories: ['Combustível', 'Manutenção', 'IPVA', 'Seguro', 'Licenciamento', 'Outros'] 
+    subcategories: [
+      'Combustível', 'Manutenção', 'Pedágio', 'Estacionamento', 
+      'IPVA', 'Seguro', 'Licenciamento', 'Lavagem', 'Multa', 'Acessórios', 'Uber/Taxi'
+    ] 
   },
   { 
     key: 'house', 
     label: 'Casa', 
     icon: 'Home', 
-    subcategories: ['Mercado', 'Limpeza', 'Aluguel', 'Contas', 'Manutenção', 'Internet'] 
+    subcategories: [
+      'Mercado', 'Limpeza', 'Aluguel', 'Condomínio', 'Internet', 'Luz', 
+      'Água', 'Gás', 'Manutenção', 'Decoração', 'Móveis', 'Jardinagem', 'Diarista'
+    ] 
   },
   { 
     key: 'partner', 
     label: 'Relacionamento', 
     icon: 'Heart', 
-    subcategories: ['Restaurante', 'Lazer & Eventos', 'Viagem', 'Presente', 'Mercado', 'Outros'] 
+    subcategories: [
+      'Restaurante', 'Lazer & Eventos', 'Viagem', 'Presente', 'Mercado', 
+      'Cinema', 'Bar/Drinks', 'Hotel', 'Transporte a Dois', 'Outros'
+    ] 
   },
   { 
     key: 'debt', 
     label: 'Dívidas', 
     icon: 'CreditCard', 
-    subcategories: ['Cartão de Crédito', 'Empréstimo', 'Financiamento'] 
+    subcategories: [
+      'Cartão de Crédito', 'Empréstimo Pessoal', 'Financiamento Imóvel', 
+      'Financiamento Veículo', 'Empréstimo Familiar', 'Cheque Especial', 'Negociação'
+    ] 
   },
   { 
     key: 'others', 
     label: 'Outros', 
     icon: 'ShoppingBag', 
-    subcategories: ['Lazer', 'Saúde', 'Educação'] 
+    subcategories: [
+      'Lazer', 'Saúde', 'Educação', 'Farmácia', 'Academia', 
+      'Roupas', 'Eletrônicos', 'Assinaturas', 'Beleza/Barbeiro', 'Pet', 'Doação', 'Jogos'
+    ] 
   }
 ];
