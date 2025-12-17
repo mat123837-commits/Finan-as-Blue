@@ -51,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, a
 
   return (
     <>
-      {/* Mobile Backdrop - Only visible if fixed positioning is applied by parent or class logic */}
+      {/* Mobile Backdrop */}
       <div 
         className={`md:hidden fixed inset-0 z-50 bg-[#13312A]/40 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -59,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, a
         onClick={onClose}
       />
 
-      {/* Sidebar Panel - Adaptive Classes */}
+      {/* Sidebar Panel */}
       <div 
         className={`
             fixed md:relative top-0 left-0 bottom-0 z-50 w-72 bg-[#FFFDF5] shadow-2xl md:shadow-none 
@@ -72,8 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, a
           {/* Header */}
           <div className="p-6 pb-2">
             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-2xl font-bold text-[#13312A] font-serif">Finanças</h2>
-               {/* Close button only on mobile */}
+               <h2 className="text-2xl font-bold text-[#13312A] font-serif">Fingreen</h2>
                <button onClick={onClose} className="md:hidden p-2 bg-[#F6E9CA] rounded-full text-[#155446] hover:bg-[#C69A72]/20">
                  <X size={20} />
                </button>
@@ -89,7 +88,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, a
                </div>
             </div>
 
-            {/* NEW ADD BUTTON FOR DESKTOP */}
             <button 
               onClick={onOpenAdd} 
               className="w-full bg-[#C69A72] text-[#13312A] font-bold py-3.5 rounded-xl mb-4 shadow-md hover:shadow-lg hover:shadow-[#C69A72]/20 transition-all flex items-center justify-center gap-2 font-serif active:scale-95 group"
@@ -135,12 +133,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, a
             ))}
           </div>
           
-          {/* Footer */}
+          {/* Footer with Logout */}
           <div className="p-6 border-t border-[#13312A]/5 bg-[#F6E9CA]/30 mt-auto">
-             <button onClick={onLogout} className="flex items-center gap-2 text-[#9F3E34] font-medium text-sm hover:opacity-80 w-full">
-                <LogOut size={16} /> Sair do App
+             <button 
+                onClick={onLogout} 
+                className="flex items-center gap-3 text-[#9F3E34] font-bold text-sm p-3 bg-white/50 rounded-xl hover:bg-white transition-all w-full shadow-sm active:scale-95 group"
+             >
+                <div className="w-8 h-8 rounded-lg bg-[#9F3E34]/10 flex items-center justify-center group-hover:bg-[#9F3E34] group-hover:text-white transition-colors">
+                  <LogOut size={16} />
+                </div>
+                Sair da Conta
              </button>
-             <p className="text-[10px] text-[#155446] mt-4">Finanças Blue v2.4 (Hybrid)</p>
+             <p className="text-[10px] text-[#155446]/40 mt-4 text-center">Fingreen v2.5 • Elegância Financeira</p>
           </div>
 
         </div>

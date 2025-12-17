@@ -1,4 +1,5 @@
 
+
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'debit' | 'credit';
 
@@ -16,6 +17,7 @@ export interface Transaction {
   isBenefit?: boolean; // If true, adds to VR/VA balance instead of Wallet
   isSalary?: boolean; // If true, marks as main salary
   paymentMethod?: PaymentMethod; // New field
+  cardId?: string; // Links to a specific credit card
   carKm?: number; // Only for Car category
   liters?: number; // Only for Car + Fuel
   installmentCurrent?: number; // 1 of X
@@ -42,6 +44,15 @@ export interface FixedExpense {
   category: CategoryKey;
 }
 
+// FixedIncome interface added to resolve import error in App.tsx
+export interface FixedIncome {
+  id: string;
+  title: string;
+  amount: number;
+  day: number; // Day of month
+  category: CategoryKey;
+}
+
 export interface Investment {
   id: string;
   name: string;
@@ -52,11 +63,17 @@ export interface Investment {
   icon?: string;
 }
 
-export interface CreditCardConfig {
+export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'elo' | 'hipercard' | 'other';
+
+export interface CreditCard {
+  id: string;
+  name: string; // e.g. "Nubank Ultravioleta"
+  brand: CardBrand;
+  last4Digits?: string;
   limit: number;
-  closingDate: number; // day of month
-  dueDate: number; // day of month
-  initialInvoiceOffset?: number; // Manual adjustment for current invoice
+  closingDay: number; // day of month
+  dueDay: number; // day of month
+  color: string; // hex code for card background
 }
 
 export interface CarConfig {
@@ -85,11 +102,12 @@ export interface AppData {
   debts: Debt[];
   investments: Investment[]; 
   fixedExpenses: FixedExpense[]; // New field
+  fixedIncomes: FixedIncome[]; // Added fixedIncomes to AppData interface to match INITIAL_DATA usage in App.tsx
   userName: string;
   showValues: boolean;
   initialBalance?: number; 
   initialBenefitBalance?: number;
-  creditCard: CreditCardConfig;
+  creditCards: CreditCard[]; // Changed from single config to array
   car: CarConfig; 
   house: HouseConfig;
   partner: PartnerConfig; 
@@ -129,7 +147,7 @@ export const CATEGORIES: { key: CategoryKey; label: string; icon: string; subcat
     icon: 'CreditCard', 
     subcategories: [
       'Cartão de Crédito', 'Empréstimo Pessoal', 'Financiamento Imóvel', 
-      'Financiamento Veículo', 'Empréstimo Familiar', 'Cheque Especial', 'Negociação'
+      'Financiamento Veículo', 'Empréstimo Familiar', 'Cheque Especial', 'Negociação', 'Ajuste Fatura'
     ] 
   },
   { 

@@ -11,22 +11,28 @@ interface InvestmentsViewProps {
 }
 
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ data, onAddInvestment, onOpenSidebar }) => {
-  const { investments, transactions, debts, creditCard } = data;
+  const { investments, transactions, debts, creditCards } = data;
 
   // 1. Calculate Net Worth
   const totalAssets = (data.initialBalance || 0) + investments.reduce((acc, inv) => acc + inv.amount, 0);
   
   const totalDebtsRemaining = debts.reduce((acc, d) => {
-      const remaining = d.totalValue * (1 - (d.installmentsPaid / d.installmentsTotal));
-      return acc + remaining;
+      const installmentVal = d.installmentValue || (d.totalValue / d.installmentsTotal);
+      const remaining = d.totalValue - (installmentVal * d.installmentsPaid);
+      return acc + Math.max(0, remaining);
   }, 0);
   
   const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  // Calculate current credit card liability (all pending transactions across all cards)
   const ccSpend = transactions
-      .filter(t => t.type === 'expense' && t.paymentMethod === 'credit' && new Date(t.date).getMonth() === now.getMonth())
+      .filter(t => t.type === 'expense' && t.paymentMethod === 'credit')
       .reduce((acc, t) => acc + t.amount, 0);
   
-  const totalLiabilities = totalDebtsRemaining + ccSpend + (creditCard.initialInvoiceOffset || 0);
+  // Total liabilities: Remaining parts of loans + everything charged to credit cards
+  const totalLiabilities = totalDebtsRemaining + ccSpend;
   const netWorth = totalAssets - totalLiabilities;
 
   const chartData = [

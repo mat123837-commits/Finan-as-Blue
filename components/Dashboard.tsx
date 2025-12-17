@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft, Calendar, CreditCard, Home, Car, Heart, Search, Filter, Activity } from 'lucide-react';
+import { Eye, EyeOff, Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft, Calendar, CreditCard, Home, Car, Heart, Search, Filter, Activity, Utensils } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, BarChart, Bar, Cell } from 'recharts';
 import { AppData, Transaction } from '../types';
 import { formatCurrency, formatDate, COLORS } from '../constants';
@@ -12,7 +12,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNavigate }) => {
-  const { transactions, showValues, userName } = data;
+  const { transactions, showValues, userName, creditCards } = data;
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -36,8 +36,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
     .reduce((acc, curr) => acc + curr.amount, 0);
   const benefitBalance = benefitIncome + (data.initialBenefitBalance || 0);
 
-  // 2. Fatura Atual
-  const creditExpensesCurrentMonth = transactions
+  // 2. Fatura Atual (Somatório de todos os cartões)
+  const creditExpensesTotal = transactions
     .filter(t => t.type === 'expense' && t.paymentMethod === 'credit')
     .filter(t => {
        const d = new Date(t.date);
@@ -45,26 +45,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
     })
     .reduce((acc, t) => acc + t.amount, 0);
   
-  const currentInvoiceValue = creditExpensesCurrentMonth + (data.creditCard?.initialInvoiceOffset || 0);
-  const creditLimit = data.creditCard?.limit || 0;
+  const currentInvoiceValue = creditExpensesTotal;
+  const creditLimit = creditCards.reduce((acc, card) => acc + card.limit, 0);
   const limitPercent = creditLimit > 0 ? (currentInvoiceValue / creditLimit) * 100 : 0;
+  
+  // Encontrar o cartão que vence mais cedo (ou apenas o primeiro) para exibição de status
+  const mainCard = creditCards.length > 0 ? creditCards[0] : null;
 
   // 3. Previsão (Liquidez)
-  // Renda do Mês Atual (para cálculo de comprometimento)
   const monthlyRealizedIncome = transactions
     .filter(t => t.type === 'income' && !t.isBenefit && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
     .reduce((acc, t) => acc + t.amount, 0);
 
   const pendingFixedExpenses = (data.fixedExpenses || []).reduce((acc, expense) => acc + expense.amount, 0); 
   
-  // Liquidez Livre: Dinheiro em conta hoje - Contas a Pagar (Fatura + Fixos)
   const forecastedFreeBalance = netBalance - currentInvoiceValue - pendingFixedExpenses;
   
-  // Comprometimento: (Fatura + Fixos) / Renda do Mês (se houver renda, senão 0 ou N/A)
   const totalCommitted = currentInvoiceValue + pendingFixedExpenses;
   const commitmentRate = monthlyRealizedIncome > 0 ? (totalCommitted / monthlyRealizedIncome) * 100 : 0;
 
-  // 4. Dados do Gráfico (Fluxo de Caixa - Área)
+  // 4. Dados do Gráfico
   const chartData = Array.from({ length: 12 }).map((_, i) => {
      const date = new Date(currentYear, i, 1);
      const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase();
@@ -80,10 +80,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
      return { name: monthLabel, Receitas: income, Despesas: expense };
   });
 
-  // 5. Transações Recentes (Lista)
   const recentTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
 
-  // 6. Totais por Categoria
   const calcCatTotal = (key: string) => transactions.filter(t => t.category === key && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const carTotal = calcCatTotal('car');
   const houseTotal = calcCatTotal('house');
@@ -92,12 +90,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 min-h-full pb-10">
       
-      {/* --- TOP ROW: HERO & KEY METRICS (Bento Grid) --- */}
       <div className="grid grid-cols-12 gap-6 h-auto min-h-[180px]">
          
-         {/* 1. HERO CARD: LIQUIDEZ PREVISTA (Posição 1 - Esquerda) */}
          <div className="col-span-12 md:col-span-5 bg-[#13312A] rounded-[2.5rem] p-8 text-[#F6E9CA] relative overflow-hidden flex flex-col justify-between shadow-xl shadow-[#13312A]/10 group transition-all hover:shadow-2xl">
-            {/* Background Decor */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#C69A72]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[#C69A72]/20 transition-all duration-700"></div>
             
             <div className="relative z-10">
@@ -130,12 +125,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                   ></div>
                </div>
                <p className="text-[10px] text-[#F6E9CA]/50 mt-2 leading-tight">
-                  Calculado: Saldo atual - (Fatura Aberta + Gastos Fixos Pendentes).
+                  Saldo atual - (Faturas Abertas + Gastos Fixos).
                </p>
             </div>
          </div>
 
-         {/* 2. SECONDARY CARD: SALDO CONTA (Posição 2 - Meio) */}
          <div className="col-span-12 md:col-span-4 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 flex flex-col justify-between shadow-sm relative overflow-hidden">
              <div className="absolute right-0 top-0 p-6 opacity-5 text-[#13312A]">
                 <Wallet size={100} />
@@ -170,7 +164,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
              </div>
          </div>
 
-         {/* 3. Credit Card Widget (Posição 3 - Direita) */}
          <div 
             onClick={() => onNavigate('cards')}
             className="col-span-12 md:col-span-3 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden flex flex-col"
@@ -180,17 +173,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                    <CreditCard size={20} />
                 </div>
                 <span className="text-xs font-bold text-[#155446] bg-[#F6E9CA]/50 px-2 py-1 rounded-lg">
-                   Fecha dia {data.creditCard.closingDate}
+                   {mainCard ? `Fecha dia ${mainCard.closingDay}` : 'Sem cartões'}
                 </span>
              </div>
              
              <div className="flex-1 flex flex-col justify-end relative z-10">
-                <p className="text-xs text-[#155446] font-bold uppercase mb-1">Fatura Atual</p>
+                <p className="text-xs text-[#155446] font-bold uppercase mb-1">Total de Faturas</p>
                 <h3 className="text-3xl font-bold text-[#13312A] font-serif mb-4">
                    {showValues ? formatCurrency(currentInvoiceValue) : 'R$ ••••'}
                 </h3>
                 
-                {/* Visual Limit Bar */}
                 <div className="w-full bg-[#F6E9CA] h-3 rounded-full overflow-hidden">
                    <div 
                      className={`h-full rounded-full transition-all duration-1000 ${limitPercent > 90 ? 'bg-[#9F3E34]' : 'bg-[#13312A]'}`} 
@@ -198,18 +190,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                    ></div>
                 </div>
                 <div className="flex justify-between mt-2 text-[10px] font-bold text-[#155446]/60">
-                   <span>0%</span>
-                   <span>{limitPercent.toFixed(0)}%</span>
+                   <span>Limite Total: {formatCurrency(creditLimit)}</span>
                 </div>
              </div>
          </div>
 
       </div>
 
-      {/* --- MIDDLE ROW: MAIN CHART & CATEGORIES --- */}
       <div className="grid grid-cols-12 gap-6">
-         
-         {/* 1. Main Cash Flow Chart (Large Area) */}
          <div className="col-span-12 md:col-span-8 bg-white rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm min-h-[400px] flex flex-col">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-2xl font-bold text-[#13312A] font-serif">Evolução Financeira</h3>
@@ -261,9 +249,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
             </div>
          </div>
 
-         {/* 2. Category Highlights (Vertical Stack) */}
          <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
-            {/* House Card */}
             <div 
                onClick={() => onNavigate('house-details')}
                className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
@@ -279,7 +265,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                </div>
             </div>
 
-            {/* Car Card */}
             <div 
                onClick={() => onNavigate('car-details')}
                className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
@@ -295,7 +280,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                </div>
             </div>
 
-            {/* Partner Card */}
             <div 
                onClick={() => onNavigate('partner-details')}
                className="flex-1 bg-white rounded-[2rem] p-5 border border-[#13312A]/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
@@ -305,16 +289,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
                      <Heart size={24} />
                   </div>
                   <div>
-                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Parceiro(a)</p>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Relacionamento</p>
                      <p className="text-xl font-bold text-[#13312A] font-serif">{showValues ? formatCurrency(partnerTotal) : '••••'}</p>
                   </div>
                </div>
             </div>
          </div>
-
       </div>
 
-      {/* --- BOTTOM ROW: RECENT TRANSACTIONS TABLE --- */}
       <div className="bg-white rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm">
           <div className="flex justify-between items-center mb-6">
              <h3 className="text-xl font-bold text-[#13312A] font-serif">Últimos Lançamentos</h3>
@@ -383,24 +365,3 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, togglePrivacy, onNav
     </div>
   );
 };
-
-function Utensils(props: any) {
-    return (
-        <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        >
-        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-        <path d="M7 2v20" />
-        <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
-        </svg>
-    )
-}

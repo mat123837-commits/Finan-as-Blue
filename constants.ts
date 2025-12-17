@@ -11,6 +11,16 @@ export const COLORS = {
   success: '#155446', // Using the medium green for success indicators
 };
 
+export const CARD_GRADIENTS: Record<string, string> = {
+    black: 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)',
+    gold: 'linear-gradient(135deg, #C69A72 0%, #E6C8A8 100%)',
+    platinum: 'linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%)',
+    blue: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+    purple: 'linear-gradient(135deg, #581c87 0%, #8b5cf6 100%)', // Nubank style
+    green: 'linear-gradient(135deg, #13312A 0%, #155446 100%)', // Fingreen style
+    red: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+};
+
 // Formatting helpers
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
