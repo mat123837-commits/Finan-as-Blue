@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { AppData, Transaction } from '../types';
 import { formatCurrency, formatDate } from '../constants';
-import { Settings, Wrench, Fuel, FileText, Gauge, ShieldCheck, ArrowLeft, Menu, Plus, Edit3 } from 'lucide-react';
+import { Settings, Wrench, Fuel, FileText, ShieldCheck, Menu, Plus, Edit3, Activity, Car, Gauge, MapPin } from 'lucide-react';
+import { AnimatedNumber } from './AnimatedNumber';
 
 interface CarViewProps {
   data: AppData;
@@ -13,196 +15,126 @@ interface CarViewProps {
 }
 
 export const CarView: React.FC<CarViewProps> = ({ data, onBack, onOpenSettings, onQuickAdd, onOpenSidebar, onEditTransaction }) => {
-  const { transactions, car } = data;
+  const { transactions, car, showValues } = data;
+  const carTransactions = transactions.filter(t => t.category === 'car' && t.type === 'expense').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const currentKm = carTransactions.find(t => t.carKm)?.carKm || 0;
+  const monthlySpend = carTransactions.filter(t => new Date(t.date).getMonth() === new Date().getMonth()).reduce((acc, t) => acc + t.amount, 0);
 
-  const carTransactions = transactions
-    .filter(t => t.category === 'car' && t.type === 'expense')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  // Data Logic
-  const lastKmTrans = carTransactions.find(t => t.carKm);
-  const currentKm = lastKmTrans?.carKm || 0;
-
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const monthlySpend = carTransactions
-    .filter(t => {
-        const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((acc, t) => acc + t.amount, 0);
-
-  const calculateTotalPaidInYear = (subMatch: string) => {
-    return carTransactions
-      .filter(t => t.subcategory && t.subcategory.includes(subMatch))
-      .filter(t => new Date(t.date).getFullYear() === currentYear)
-      .reduce((acc, t) => acc + t.amount, 0);
-  };
-
-  const ipvaPaid = calculateTotalPaidInYear('IPVA');
-  const insurancePaid = calculateTotalPaidInYear('Seguro');
-  const ipvaProgress = car.ipvaTotal > 0 ? (ipvaPaid / car.ipvaTotal) * 100 : 0;
-  const insuranceProgress = car.insuranceTotal > 0 ? (insurancePaid / car.insuranceTotal) * 100 : 0;
-
-  const getSubIcon = (sub: string) => {
-    if (sub.includes('Preventiva') || sub.includes('Manutenção')) return Wrench;
-    if (sub.includes('Combustível')) return Fuel;
-    if (sub.includes('IPVA')) return FileText;
-    if (sub.includes('Seguro')) return ShieldCheck;
-    return Settings;
-  };
+  const ipvaPaid = carTransactions.filter(t => (t.subcategory || '').includes('IPVA')).reduce((acc, t) => acc + t.amount, 0);
+  const insurancePaid = carTransactions.filter(t => (t.subcategory || '').includes('Seguro')).reduce((acc, t) => acc + t.amount, 0);
 
   return (
-    <div className="pb-32 animate-in slide-in-from-right duration-300 relative min-h-screen">
-      
-      {/* FAB */}
-      <button 
-        onClick={() => onQuickAdd('')} 
-        className="fixed bottom-8 right-6 w-14 h-14 bg-[#162660] text-white rounded-full shadow-xl shadow-blue-900/30 flex items-center justify-center z-50 active:scale-90 transition-transform hover:bg-[#1e3a8a] md:hidden"
-      >
-        <Plus size={32} />
-      </button>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 pt-4">
-         <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 bg-white rounded-full text-gray-500 hover:text-[#162660] shadow-sm">
-               <ArrowLeft size={20} />
-            </button>
-            <h2 className="text-2xl font-bold text-[#162660]">Meu Veículo</h2>
+    <div className="pb-32 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between mb-8">
+         <div className="flex items-center gap-4">
+            <button onClick={onOpenSidebar} className="p-2 bg-white rounded-xl shadow-sm text-[#13312A]"><Menu size={20} /></button>
+            <h2 className="text-2xl font-bold text-[#13312A] font-serif">Meu Veículo</h2>
          </div>
-         <div className="flex gap-2">
-            <button onClick={() => onQuickAdd('')} className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#162660] text-white rounded-xl text-sm font-bold hover:bg-[#1e3a8a]">
-               <Plus size={16} /> Novo Gasto
-            </button>
-            <button onClick={onOpenSettings} className="p-2 bg-white rounded-full text-gray-400 hover:text-[#162660] shadow-sm">
-               <Settings size={20} />
-            </button>
-         </div>
+         <button onClick={onOpenSettings} className="p-3 bg-white rounded-2xl text-gray-400 hover:text-[#13312A] transition-all"><Settings size={22} /></button>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-         
-         {/* 1. Dashboard Hero (KM & Model) - Span 12 on mobile, 8 on desktop */}
-         <div className="col-span-12 md:col-span-8 bg-[#162660] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-900/20">
-             <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-             
-             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                 <div>
-                     <div className="flex items-center gap-2 mb-2 opacity-80">
-                         <Settings size={18} />
-                         <span className="text-sm font-bold uppercase tracking-wider">{car.modelName || 'Carro Principal'}</span>
-                     </div>
-                     <h3 className="text-5xl font-bold font-mono tracking-tighter">
-                         {currentKm > 0 ? (currentKm/1000).toFixed(0) : '0'}
-                         <span className="text-2xl text-blue-300 ml-1">k km</span>
-                     </h3>
-                     <p className="text-xs text-blue-200 mt-2">Placa Final: {car.plateLastDigit || '?'}</p>
-                 </div>
+      <div className="grid grid-cols-12 gap-4">
+        
+        {/* BENTO: ODÔMETRO (MAIN CARD) */}
+        <div className="col-span-12 lg:col-span-8 bg-[#13312A] rounded-[2.5rem] p-8 text-[#F6E9CA] shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+           <div className="absolute top-0 right-0 p-8 opacity-10"><Gauge size={140} /></div>
+           <div className="relative z-10">
+              <span className="text-[10px] font-bold text-[#C69A72] uppercase tracking-[0.3em]">Quilometragem Total</span>
+              <div className="text-7xl font-bold font-serif tracking-tighter flex items-baseline gap-2 mt-2">
+                 <AnimatedNumber value={currentKm} className="text-white" />
+                 <span className="text-xl font-sans font-bold text-[#C69A72] opacity-60">KM</span>
+              </div>
+           </div>
+           <div className="relative z-10 flex items-center gap-2 text-[10px] font-medium opacity-60">
+              <MapPin size={12} /> {car.modelName || 'Veículo Registrado'} • Atualizado recentemente
+           </div>
+        </div>
 
-                 <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm min-w-[160px]">
-                     <p className="text-xs text-blue-200 mb-1">Gasto (Mês Atual)</p>
-                     <p className="text-2xl font-bold">{formatCurrency(monthlySpend)}</p>
-                 </div>
-             </div>
-         </div>
+        {/* BENTO: GASTO MENSAL (SQUARE) */}
+        <div className="col-span-6 lg:col-span-2 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm flex flex-col justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#F6E9CA] text-[#13312A] flex items-center justify-center"><Activity size={20} /></div>
+            <div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Mês Atual</p>
+              <div className="text-xl font-bold text-[#13312A] font-serif">
+                <AnimatedNumber value={monthlySpend} />
+              </div>
+            </div>
+        </div>
 
-         {/* 2. Quick Actions (Span 12 mobile, 4 desktop) */}
-         <div className="col-span-12 md:col-span-4 flex flex-col gap-3">
-             <button onClick={() => onQuickAdd('Combustível')} className="flex-1 bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
-                 <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <Fuel size={24} />
-                 </div>
-                 <div className="text-left">
-                     <p className="font-bold text-[#162660]">Abastecer</p>
-                     <p className="text-xs text-gray-400">Registrar combustível</p>
-                 </div>
-             </button>
-             <button onClick={() => onQuickAdd('Manutenção')} className="flex-1 bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group">
-                 <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <Wrench size={24} />
-                 </div>
-                 <div className="text-left">
-                     <p className="font-bold text-[#162660]">Oficina</p>
-                     <p className="text-xs text-gray-400">Registrar manutenção</p>
-                 </div>
-             </button>
-         </div>
+        {/* BENTO: LICENCIAMENTO (SQUARE) */}
+        <div className="col-span-6 lg:col-span-2 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm flex flex-col justify-between">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><FileText size={20} /></div>
+            <div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Licenciar</p>
+              <div className="text-xl font-bold text-[#13312A] font-serif">
+                {car.licensingTotal > 0 ? formatCurrency(car.licensingTotal) : '--'}
+              </div>
+            </div>
+        </div>
 
-         {/* 3. Taxes Progress (Span 6 each) */}
-         <div className="col-span-12 md:col-span-6 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center gap-3">
-                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                         <FileText size={20} />
-                     </div>
-                     <span className="font-bold text-[#162660]">IPVA {currentYear}</span>
-                 </div>
-                 <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{ipvaProgress.toFixed(0)}% Pago</span>
-             </div>
-             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
-                 <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(ipvaProgress, 100)}%` }}></div>
-             </div>
-             <div className="flex justify-between text-xs text-gray-400">
-                 <span>Pago: {formatCurrency(ipvaPaid)}</span>
-                 <span>Total: {formatCurrency(car.ipvaTotal)}</span>
-             </div>
-         </div>
+        {/* BENTO: QUICK ACTION FUEL */}
+        <button onClick={() => onQuickAdd('Combustível')} className="col-span-6 lg:col-span-3 bg-[#C69A72] rounded-[2.5rem] p-6 shadow-lg shadow-[#C69A72]/20 flex items-center gap-4 group hover:scale-[1.02] transition-all">
+           <div className="w-12 h-12 rounded-2xl bg-[#13312A] text-[#C69A72] flex items-center justify-center group-hover:scale-110 transition-transform"><Fuel size={24} /></div>
+           <span className="font-bold text-[#13312A] uppercase text-xs tracking-widest">Abastecer</span>
+        </button>
 
-         <div className="col-span-12 md:col-span-6 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center gap-3">
-                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                         <ShieldCheck size={20} />
-                     </div>
-                     <span className="font-bold text-[#162660]">Seguro Auto</span>
-                 </div>
-                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">{insuranceProgress.toFixed(0)}% Pago</span>
-             </div>
-             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
-                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(insuranceProgress, 100)}%` }}></div>
-             </div>
-             <div className="flex justify-between text-xs text-gray-400">
-                 <span>Pago: {formatCurrency(insurancePaid)}</span>
-                 <span>Total: {formatCurrency(car.insuranceTotal)}</span>
-             </div>
-         </div>
+        {/* BENTO: QUICK ACTION SERVICE */}
+        <button onClick={() => onQuickAdd('Manutenção')} className="col-span-6 lg:col-span-3 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm flex items-center gap-4 group hover:scale-[1.02] transition-all">
+           <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform"><Wrench size={24} /></div>
+           <span className="font-bold text-[#13312A] uppercase text-xs tracking-widest">Oficina</span>
+        </button>
 
-         {/* 4. History Table (Span 12) */}
-         <div className="col-span-12 bg-[#FFFDF5] rounded-[2.5rem] p-6 border border-gray-100 shadow-sm">
-             <h3 className="font-bold text-[#162660] mb-4">Histórico Recente</h3>
-             <div className="space-y-3">
-                {carTransactions.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400">Nenhum registro encontrado.</div>
-                ) : (
-                  carTransactions.slice(0, 5).map((t) => {
-                    const sub = t.subcategory || '';
-                    const Icon = getSubIcon(sub);
-                    const isFuel = sub.includes('Combustível');
-                    return (
-                      <div key={t.id} className="flex items-center justify-between p-4 bg-white border border-gray-50 rounded-2xl hover:bg-gray-50 transition-colors">
-                         <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center">
-                                 <Icon size={18} />
-                             </div>
-                             <div>
-                                 <p className="font-bold text-[#162660] text-sm">{sub || 'Geral'}</p>
-                                 <p className="text-xs text-gray-400">{formatDate(t.date)} {isFuel && t.liters && `• ${t.liters}L`}</p>
-                             </div>
-                         </div>
-                         <div className="flex items-center gap-3">
-                             <span className="font-bold text-[#162660]">{formatCurrency(t.amount)}</span>
-                             <button onClick={() => onEditTransaction(t)} className="p-2 text-gray-300 hover:text-[#162660]">
-                                 <Edit3 size={16} />
-                             </button>
-                         </div>
-                      </div>
-                    );
-                  })
-                )}
-             </div>
-         </div>
+        {/* BENTO: TAX PROGRESS IPVA */}
+        <div className="col-span-12 lg:col-span-3 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm">
+           <div className="flex justify-between items-center mb-4">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IPVA Anual</span>
+              <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded-lg">Pago</span>
+           </div>
+           <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden mb-2">
+              <div className="h-full bg-rose-500 rounded-full" style={{ width: `${car.ipvaTotal > 0 ? (ipvaPaid / car.ipvaTotal) * 100 : 0}%` }}></div>
+           </div>
+           <div className="flex justify-between text-[10px] font-bold text-[#13312A] font-serif">
+              <span>{formatCurrency(ipvaPaid)}</span>
+              <span className="opacity-40">{formatCurrency(car.ipvaTotal)}</span>
+           </div>
+        </div>
+
+        {/* BENTO: TAX PROGRESS INSURANCE */}
+        <div className="col-span-12 lg:col-span-3 bg-white rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm">
+           <div className="flex justify-between items-center mb-4">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Seguro Auto</span>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Protegido</span>
+           </div>
+           <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden mb-2">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${car.insuranceTotal > 0 ? (insurancePaid / car.insuranceTotal) * 100 : 0}%` }}></div>
+           </div>
+           <div className="flex justify-between text-[10px] font-bold text-[#13312A] font-serif">
+              <span>{formatCurrency(insurancePaid)}</span>
+              <span className="opacity-40">{formatCurrency(car.insuranceTotal)}</span>
+           </div>
+        </div>
+
+        {/* BENTO: DIÁRIO DE BORDO (LISTA COMPACTA) */}
+        <div className="col-span-12 bg-white rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm mt-2">
+           <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-[#13312A] font-serif">Últimos Registros</h3>
+              <Plus size={18} className="text-[#C69A72] cursor-pointer" onClick={() => onQuickAdd('')} />
+           </div>
+           <div className="space-y-1">
+              {carTransactions.slice(0, 4).map(t => (
+                <div key={t.id} onClick={() => onEditTransaction(t)} className="flex items-center justify-between p-4 hover:bg-[#F6E9CA]/30 rounded-2xl transition-all cursor-pointer group">
+                  <div className="flex items-center gap-4">
+                    <div className="text-[10px] font-bold text-gray-300 w-10">{formatDate(t.date)}</div>
+                    <div className="font-bold text-[#13312A] text-sm">{t.subcategory}</div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-bold text-[#13312A] font-serif text-sm">{formatCurrency(t.amount)}</span>
+                    <Edit3 size={14} className="text-gray-200 group-hover:text-[#13312A]" />
+                  </div>
+                </div>
+              ))}
+           </div>
+        </div>
 
       </div>
     </div>

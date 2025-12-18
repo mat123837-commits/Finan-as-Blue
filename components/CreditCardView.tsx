@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppData, CATEGORIES, CategoryKey, Transaction, CreditCard, CardBrand } from '../types';
 import { formatCurrency, formatDate, COLORS, CARD_GRADIENTS } from '../constants';
@@ -10,6 +11,8 @@ interface CreditCardViewProps {
   onOpenSidebar: () => void;
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void;
   onEditTransaction: (transaction: Transaction) => void;
+  onSaveCard: (card: CreditCard | Omit<CreditCard, 'id'>) => void;
+  onDeleteCard: (id: string) => void;
 }
 
 // --- NEW CARD MODAL ---
@@ -31,7 +34,6 @@ const ManageCardModal = ({ isOpen, onClose, onSave, onDelete, initialData }: { i
                 setClosing(initialData.closingDay.toString());
                 setDue(initialData.dueDay.toString());
                 setLast4(initialData.last4Digits || '');
-                // Find color key based on gradient match or default
                 const foundKey = Object.keys(CARD_GRADIENTS).find(k => CARD_GRADIENTS[k] === initialData.color) || 'black';
                 setColorKey(foundKey);
             } else {
@@ -76,13 +78,13 @@ const ManageCardModal = ({ isOpen, onClose, onSave, onDelete, initialData }: { i
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Apelido do Cartão</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nubank" className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold" required />
+                        <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Apelido do Cartão</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nubank" className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold outline-none focus:ring-2 focus:ring-[#C69A72]" required />
                     </div>
                     <div className="flex gap-3">
                          <div className="flex-1">
-                             <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Bandeira</label>
-                             <select value={brand} onChange={e => setBrand(e.target.value as CardBrand)} className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold appearance-none">
+                             <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Bandeira</label>
+                             <select value={brand} onChange={e => setBrand(e.target.value as CardBrand)} className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold outline-none appearance-none">
                                 <option value="mastercard">Mastercard</option>
                                 <option value="visa">Visa</option>
                                 <option value="amex">Amex</option>
@@ -92,33 +94,33 @@ const ManageCardModal = ({ isOpen, onClose, onSave, onDelete, initialData }: { i
                              </select>
                          </div>
                          <div className="flex-1">
-                             <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Final (4 díc.)</label>
-                             <input type="text" maxLength={4} value={last4} onChange={e => setLast4(e.target.value)} placeholder="1234" className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold text-center" />
+                             <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Final (4 díc.)</label>
+                             <input type="text" maxLength={4} value={last4} onChange={e => setLast4(e.target.value)} placeholder="1234" className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold text-center outline-none focus:ring-2 focus:ring-[#C69A72]" />
                          </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Limite Total</label>
-                        <input type="number" value={limit} onChange={e => setLimit(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold" required />
+                        <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Limite Total</label>
+                        <input type="number" value={limit} onChange={e => setLimit(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold outline-none focus:ring-2 focus:ring-[#C69A72]" required />
                     </div>
                     <div className="flex gap-3">
                          <div className="flex-1">
-                             <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Fechamento</label>
-                             <input type="number" min="1" max="31" value={closing} onChange={e => setClosing(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold text-center" />
+                             <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Fechamento</label>
+                             <input type="number" min="1" max="31" value={closing} onChange={e => setClosing(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold text-center outline-none" />
                          </div>
                          <div className="flex-1">
-                             <label className="block text-xs font-bold text-[#13312A] uppercase mb-1">Vencimento</label>
-                             <input type="number" min="1" max="31" value={due} onChange={e => setDue(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-white border border-[#13312A]/10 font-bold text-center" />
+                             <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-1 ml-1">Vencimento</label>
+                             <input type="number" min="1" max="31" value={due} onChange={e => setDue(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white border border-[#13312A]/10 font-bold text-center outline-none" />
                          </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-[#13312A] uppercase mb-2">Estilo do Cartão</label>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <label className="block text-[10px] font-bold text-[#13312A] uppercase mb-2 ml-1">Estilo do Cartão</label>
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
                             {Object.keys(CARD_GRADIENTS).map(key => (
                                 <button 
                                     key={key} 
                                     type="button"
                                     onClick={() => setColorKey(key)} 
-                                    className={`w-10 h-10 rounded-full border-2 transition-all shrink-0 ${colorKey === key ? 'border-[#13312A] scale-110' : 'border-transparent'}`} 
+                                    className={`w-10 h-10 rounded-full border-2 transition-all shrink-0 ${colorKey === key ? 'border-[#13312A] scale-110 shadow-md' : 'border-transparent opacity-60'}`} 
                                     style={{ background: CARD_GRADIENTS[key] }}
                                 />
                             ))}
@@ -126,9 +128,9 @@ const ManageCardModal = ({ isOpen, onClose, onSave, onDelete, initialData }: { i
                     </div>
                     <div className="pt-2 flex gap-3">
                         {initialData && onDelete && (
-                             <button type="button" onClick={() => { onDelete(initialData.id); onClose(); }} className="p-4 bg-red-100 text-red-500 rounded-xl font-bold"><Trash2 size={20} /></button>
+                             <button type="button" onClick={() => { onDelete(initialData.id); onClose(); }} className="p-4 bg-red-100 text-red-500 rounded-2xl font-bold hover:bg-red-500 hover:text-white transition-colors"><Trash2 size={20} /></button>
                         )}
-                        <button type="submit" className="flex-1 py-4 bg-[#13312A] text-[#C69A72] rounded-xl font-bold font-serif">Salvar Cartão</button>
+                        <button type="submit" className="flex-1 py-4 bg-[#13312A] text-[#C69A72] rounded-2xl font-bold font-serif active:scale-95 transition-transform">Salvar Cartão</button>
                     </div>
                 </form>
             </div>
@@ -137,13 +139,12 @@ const ManageCardModal = ({ isOpen, onClose, onSave, onDelete, initialData }: { i
 }
 
 // --- WALLET COMPONENT ---
-export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSettings, onOpenSidebar, onAddTransaction, onEditTransaction }) => {
+export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSettings, onOpenSidebar, onAddTransaction, onEditTransaction, onSaveCard, onDeleteCard }) => {
   const { transactions, creditCards } = data;
   const [selectedCardId, setSelectedCardId] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CreditCard | undefined>(undefined);
 
-  // Determine which transactions to show
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -158,7 +159,6 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
-  // Calculate Aggregates
   const calculateCardTotals = (cardId: string) => {
       const cardTrans = transactions.filter(t => t.type === 'expense' && t.paymentMethod === 'credit' && t.cardId === cardId);
       const invoice = cardTrans.filter(t => {
@@ -168,7 +168,7 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
       
       const future = cardTrans.filter(t => {
            const d = new Date(t.date);
-           return d > new Date(currentYear, currentMonth + 1, 0); // After current month
+           return d > new Date(currentYear, currentMonth + 1, 0);
       }).reduce((acc, t) => acc + t.amount, 0);
       
       return { invoice, future };
@@ -193,9 +193,8 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
       })();
   
   const limitPercentage = totalLimit > 0 ? (totalUsed / totalLimit) * 100 : 0;
-  const availableLimit = totalLimit - totalUsed;
+  const availableLimit = Math.max(0, totalLimit - totalUsed);
 
-  // Pie Chart Data
   const categoryTotals: Record<string, number> = {};
   currentMonthTransactions.forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount; });
   const pieData = Object.keys(categoryTotals).map(catKey => {
@@ -209,48 +208,25 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
       return { name: catDef?.label || 'Outros', value: categoryTotals[catKey], color: color, key: catKey };
   }).sort((a, b) => b.value - a.value);
 
-  // Handlers for App.tsx to implement persistence
-  // NOTE: These events bubble up. App.tsx needs to implement onSaveCard/onDeleteCard logic or pass it down.
-  // Since I can't change App.tsx easily in this context to add new Props without changing the interface, I will assume a global event or dispatch approach,
-  // BUT the user prompt said "I want the credit card page to be sophisticated... logic for multiple cards".
-  // To make this work without breaking the build, I will trigger a CustomEvent or use a workaround if App.tsx isn't passed new props.
-  // HOWEVER, I am editing App.tsx too. So I will add `onSaveCard` to props later. For now, I'll use a local mock or assume `onOpenSettings` handles it?
-  // Let's rely on `window.dispatchEvent` for the CRUD of cards if props are restricted, OR ideally, I update App.tsx to pass these handlers.
-  // I WILL UPDATE APP.TSX, so I will add these props to the interface.
-
-  // NOTE: Since I cannot edit App.tsx interface in THIS file block, I have to be careful.
-  // Wait, I AM generating App.tsx too. So I can change the interface.
-
-  const handleCardSave = (card: CreditCard | Omit<CreditCard, 'id'>) => {
-      // Dispath event for App.tsx to catch
-      const event = new CustomEvent('save-card', { detail: card });
-      window.dispatchEvent(event);
-  };
-  const handleCardDelete = (id: string) => {
-      const event = new CustomEvent('delete-card', { detail: id });
-      window.dispatchEvent(event);
-      if(selectedCardId === id) setSelectedCardId('all');
-  };
-
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-700 pb-24 relative">
       
       <ManageCardModal 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingCard(undefined); }} 
-        onSave={handleCardSave} 
-        onDelete={handleCardDelete}
+        onSave={onSaveCard} 
+        onDelete={onDeleteCard}
         initialData={editingCard}
       />
 
       <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-[#13312A] font-serif">Minha Carteira</h2>
           <div className="flex gap-2">
-             <button onClick={() => { setEditingCard(undefined); setIsModalOpen(true); }} className="px-4 py-2 bg-[#13312A] text-[#C69A72] rounded-full text-xs font-bold hover:bg-[#0f2620] shadow-sm flex items-center gap-2">
+             <button onClick={() => { setEditingCard(undefined); setIsModalOpen(true); }} className="px-4 py-2 bg-[#13312A] text-[#C69A72] rounded-full text-xs font-bold hover:bg-[#0f2620] shadow-sm flex items-center gap-2 transition-all active:scale-95">
                 <Plus size={16} /> Add Cartão
              </button>
-             <button onClick={onOpenSettings} className="p-2 bg-white rounded-full text-[#155446] hover:text-[#13312A] shadow-sm transition-colors">
-                <Settings size={20} />
+             <button onClick={onOpenSidebar} className="p-2 bg-white rounded-full text-[#155446] hover:text-[#13312A] shadow-sm transition-colors md:hidden">
+                <PieIcon size={20} />
              </button>
           </div>
       </div>
@@ -258,10 +234,9 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
       {/* --- CARDS CAROUSEL --- */}
       <div className="w-full overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0">
           <div className="flex gap-4 w-max">
-              {/* 'ALL' Card */}
               <button 
                  onClick={() => setSelectedCardId('all')}
-                 className={`w-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 transition-all border-2 ${selectedCardId === 'all' ? 'bg-[#13312A] border-[#13312A] text-[#C69A72] shadow-lg' : 'bg-white border-transparent text-[#155446] opacity-70'}`}
+                 className={`w-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 transition-all border-2 ${selectedCardId === 'all' ? 'bg-[#13312A] border-[#13312A] text-[#C69A72] shadow-lg' : 'bg-white border-transparent text-[#155446] opacity-70 hover:opacity-100'}`}
               >
                   <BarChart3 size={24} />
                   <span className="text-[10px] font-bold uppercase rotate-180 py-2" style={{ writingMode: 'vertical-rl' }}>Geral</span>
@@ -276,49 +251,46 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
                       <div 
                          key={card.id}
                          onClick={() => setSelectedCardId(card.id)}
-                         className={`relative w-72 h-44 rounded-[2rem] p-5 flex flex-col justify-between shadow-xl transition-all cursor-pointer border-4 ${isSelected ? 'border-[#C69A72] scale-[1.02]' : 'border-transparent hover:scale-[1.01]'}`}
+                         className={`relative w-72 h-44 rounded-[2rem] p-5 flex flex-col justify-between shadow-xl transition-all cursor-pointer border-4 ${isSelected ? 'border-[#C69A72] scale-[1.02] ring-4 ring-[#C69A72]/10' : 'border-transparent hover:scale-[1.01]'}`}
                          style={{ background: card.color, color: 'white' }}
                       >
                           <div className="flex justify-between items-start">
                               <div>
                                   <p className="font-bold text-lg tracking-wide shadow-black drop-shadow-md">{card.name}</p>
-                                  <p className="text-xs opacity-80 uppercase tracking-widest">{card.brand}</p>
+                                  <p className="text-[10px] opacity-80 uppercase tracking-widest font-bold">{card.brand}</p>
                               </div>
                               {isSelected && (
-                                  <button onClick={(e) => { e.stopPropagation(); setEditingCard(card); setIsModalOpen(true); }} className="p-1.5 bg-white/20 rounded-full hover:bg-white/30 backdrop-blur-md">
+                                  <button onClick={(e) => { e.stopPropagation(); setEditingCard(card); setIsModalOpen(true); }} className="p-2 bg-white/20 rounded-full hover:bg-white/30 backdrop-blur-md transition-colors">
                                       <Edit3 size={14} />
                                   </button>
                               )}
                           </div>
                           
                           <div>
-                              <div className="flex justify-between items-end mb-2">
+                              <div className="flex justify-between items-end mb-3">
                                   <div className="flex items-center gap-2">
-                                      <div className="w-8 h-5 bg-[#C69A72] rounded-md flex overflow-hidden relative">
-                                          <div className="absolute inset-0 border border-[#b58b66]"></div>
-                                          <div className="w-1/2 h-full border-r border-[#b58b66]"></div>
+                                      <div className="w-8 h-5 bg-[#C69A72]/30 rounded-md border border-white/20 relative">
+                                          <div className="absolute top-1 left-1 w-2 h-1 bg-white/20 rounded-sm"></div>
                                       </div>
-                                      <span className="font-mono text-sm opacity-90">•••• {card.last4Digits || '0000'}</span>
+                                      <span className="font-mono text-xs opacity-90 tracking-tighter">•••• {card.last4Digits || '0000'}</span>
                                   </div>
                                   <div className="text-right">
-                                      <p className="text-[10px] opacity-70 uppercase">Fatura Atual</p>
-                                      <p className="font-bold text-lg font-serif">{formatCurrency(cardTotals.invoice)}</p>
+                                      <p className="text-[8px] opacity-60 uppercase font-bold tracking-widest">Fatura Atual</p>
+                                      <p className="font-bold text-xl font-serif leading-none">{formatCurrency(cardTotals.invoice)}</p>
                                   </div>
                               </div>
-                              {/* Mini Limit Bar on Card */}
                               <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
-                                  <div className="h-full bg-white/90 rounded-full" style={{ width: `${Math.min(limitPct, 100)}%` }}></div>
+                                  <div className="h-full bg-white/90 rounded-full transition-all duration-1000" style={{ width: `${Math.min(limitPct, 100)}%` }}></div>
                               </div>
                           </div>
                       </div>
                   );
               })}
 
-              {/* Ghost Add Card (if empty) */}
-              {creditCards.length === 0 && (
-                  <button onClick={() => setIsModalOpen(true)} className="w-72 h-44 rounded-[2rem] border-2 border-dashed border-[#13312A]/20 flex flex-col items-center justify-center text-[#155446] gap-2 hover:bg-[#13312A]/5 transition-colors">
-                      <Plus size={32} />
-                      <span className="font-bold">Adicionar Cartão</span>
+              {creditCards.length < 5 && (
+                  <button onClick={() => { setEditingCard(undefined); setIsModalOpen(true); }} className="w-72 h-44 rounded-[2rem] border-2 border-dashed border-[#13312A]/20 flex flex-col items-center justify-center text-[#155446] gap-2 hover:bg-[#13312A]/5 transition-all group">
+                      <div className="p-3 bg-white rounded-2xl group-hover:scale-110 transition-transform"><Plus size={24} /></div>
+                      <span className="font-bold text-sm">Novo Cartão</span>
                   </button>
               )}
           </div>
@@ -327,93 +299,110 @@ export const CreditCardView: React.FC<CreditCardViewProps> = ({ data, onOpenSett
       {/* --- STATS GRID --- */}
       <div className="grid grid-cols-12 gap-6">
           
-          {/* Main Info Box */}
-          <div className="col-span-12 md:col-span-6 bg-white rounded-[2.5rem] p-6 shadow-sm border border-[#13312A]/5">
-              <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-[#F6E9CA] rounded-xl text-[#13312A]">
-                      <CardIcon size={20} />
-                  </div>
-                  <div>
-                      <h3 className="font-bold text-[#13312A]">Resumo da Fatura</h3>
-                      <p className="text-xs text-gray-400">{selectedCardId === 'all' ? 'Todas as Faturas' : 'Cartão Selecionado'}</p>
-                  </div>
-              </div>
-              <h2 className="text-4xl font-bold text-[#13312A] font-serif mb-6">{formatCurrency(totalInvoice)}</h2>
-              
-              <div className="space-y-4">
-                  <div>
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Limite Utilizado ({limitPercentage.toFixed(0)}%)</span>
-                          <span className="font-bold text-[#13312A]">{formatCurrency(totalUsed)}</span>
-                      </div>
-                      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-700 ${limitPercentage > 90 ? 'bg-red-500' : 'bg-[#13312A]'}`} style={{ width: `${Math.min(limitPercentage, 100)}%` }}></div>
-                      </div>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-[#FFFDF5] rounded-2xl border border-[#13312A]/5">
-                      <span className="text-xs font-bold text-[#155446] uppercase">Disponível</span>
-                      <span className="font-bold text-[#13312A]">{formatCurrency(availableLimit)}</span>
-                  </div>
+          <div className="col-span-12 md:col-span-6 bg-white rounded-[2.5rem] p-8 shadow-sm border border-[#13312A]/5 relative overflow-hidden group">
+              <div className="absolute right-0 top-0 p-8 text-[#13312A]/5 group-hover:scale-110 transition-transform"><CardIcon size={120} /></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-[#F6E9CA] rounded-xl text-[#13312A]">
+                        <CardIcon size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-[#13312A] font-serif">Resumo Financeiro</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{selectedCardId === 'all' ? 'Consolidado' : 'Específico'}</p>
+                    </div>
+                </div>
+                <h2 className="text-5xl font-bold text-[#13312A] font-serif mb-8 tracking-tight">{formatCurrency(totalInvoice)}</h2>
+                
+                <div className="space-y-6">
+                    <div>
+                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                            <span>Utilização do Limite</span>
+                            <span className="text-[#13312A]">{limitPercentage.toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full h-3 bg-[#F6E9CA]/30 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-1000 ${limitPercentage > 90 ? 'bg-red-500' : 'bg-[#13312A]'}`} style={{ width: `${Math.min(limitPercentage, 100)}%` }}></div>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="flex-1 p-4 bg-[#F6E9CA]/20 rounded-2xl border border-[#13312A]/5">
+                            <span className="text-[9px] font-bold text-[#155446] uppercase tracking-widest block mb-1">Limite Livre</span>
+                            <span className="font-bold text-[#13312A] text-lg font-serif">{formatCurrency(availableLimit)}</span>
+                        </div>
+                        <div className="flex-1 p-4 bg-white rounded-2xl border border-[#13312A]/5 shadow-sm">
+                            <span className="text-[9px] font-bold text-[#155446] uppercase tracking-widest block mb-1">Gasto Total</span>
+                            <span className="font-bold text-[#13312A] text-lg font-serif">{formatCurrency(totalUsed)}</span>
+                        </div>
+                    </div>
+                </div>
               </div>
           </div>
 
-          {/* Breakdown Pie */}
-          <div className="col-span-12 md:col-span-6 bg-white rounded-[2.5rem] p-6 shadow-sm border border-[#13312A]/5 flex flex-col">
-              <h3 className="font-bold text-[#13312A] mb-4 text-sm">Onde gastei?</h3>
-              <div className="flex-1 flex items-center gap-4">
-                  <div className="h-32 w-32 relative">
+          <div className="col-span-12 md:col-span-6 bg-white rounded-[2.5rem] p-8 shadow-sm border border-[#13312A]/5 flex flex-col">
+              <h3 className="font-bold text-[#13312A] mb-8 text-sm uppercase tracking-widest flex items-center gap-2"><PieIcon size={16} /> Composição de Gastos</h3>
+              <div className="flex-1 flex flex-col md:flex-row items-center gap-8">
+                  <div className="h-48 w-48 relative shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none" cornerRadius={4}>
+                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={6} dataKey="value" stroke="none" cornerRadius={8}>
                                     {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                 </Pie>
                             </PieChart>
                         </ResponsiveContainer>
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <PieIcon size={16} className="text-gray-300" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Mês</span>
+                            <span className="text-xs font-bold text-[#13312A] font-serif">{pieData.length} Cats</span>
                         </div>
                   </div>
-                  <div className="flex-1 space-y-2 max-h-32 overflow-y-auto no-scrollbar">
-                      {pieData.length === 0 && <p className="text-xs text-gray-400">Sem gastos no período.</p>}
-                      {pieData.map(item => (
-                          <div key={item.key} className="flex justify-between items-center text-xs">
-                              <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                  <span className="text-gray-600 truncate max-w-[80px]">{item.name}</span>
+                  <div className="flex-1 w-full space-y-3 max-h-48 overflow-y-auto no-scrollbar">
+                      {pieData.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center italic py-4">Sem dados para este filtro.</p>
+                      ) : (
+                        pieData.map(item => (
+                          <div key={item.key} className="flex justify-between items-center group">
+                              <div className="flex items-center gap-3">
+                                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
+                                  <span className="text-xs font-bold text-[#155446] group-hover:text-[#13312A] transition-colors">{item.name}</span>
                               </div>
-                              <span className="font-bold">{formatCurrency(item.value)}</span>
+                              <span className="font-bold text-xs font-mono">{formatCurrency(item.value)}</span>
                           </div>
-                      ))}
+                        ))
+                      )}
                   </div>
               </div>
           </div>
 
           {/* Transactions List */}
-          <div className="col-span-12 bg-[#FFFDF5] rounded-[2.5rem] p-6 border border-[#13312A]/5 shadow-sm">
-              <h3 className="font-bold text-[#13312A] mb-4">Lançamentos na Fatura</h3>
-              <div className="space-y-2">
+          <div className="col-span-12 bg-[#FFFDF5] rounded-[2.5rem] p-8 border border-[#13312A]/5 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-[#13312A] font-serif text-lg">Lançamentos na Fatura</h3>
+                <span className="text-[10px] font-bold text-[#155446] uppercase bg-[#F6E9CA] px-3 py-1 rounded-full">{currentMonthTransactions.length} itens</span>
+              </div>
+              <div className="space-y-3">
                   {currentMonthTransactions.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">Nenhum lançamento nesta fatura.</div>
+                      <div className="text-center py-12 text-gray-400 bg-white/50 rounded-3xl border border-dashed border-[#13312A]/10">
+                        <ShoppingBag size={32} className="mx-auto mb-2 opacity-20" />
+                        <p className="text-xs font-medium">Nenhum gasto registrado neste cartão.</p>
+                      </div>
                   ) : (
                       currentMonthTransactions.map(t => {
-                          const cardName = creditCards.find(c => c.id === t.cardId)?.name || 'Cartão';
+                          const card = creditCards.find(c => c.id === t.cardId);
                           return (
-                              <div key={t.id} className="flex items-center justify-between p-4 bg-white border border-gray-50 rounded-2xl hover:bg-[#F6E9CA]/20 transition-colors cursor-pointer group" onClick={() => onEditTransaction(t)}>
+                              <div key={t.id} className="flex items-center justify-between p-4 bg-white border border-[#13312A]/5 rounded-2xl hover:bg-[#F6E9CA]/30 transition-all cursor-pointer group shadow-sm hover:shadow-md" onClick={() => onEditTransaction(t)}>
                                   <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
-                                          <ShoppingBag size={18} />
+                                      <div className="w-12 h-12 rounded-xl bg-[#F6E9CA]/30 text-[#13312A] flex items-center justify-center group-hover:scale-110 transition-transform">
+                                          <ShoppingBag size={22} />
                                       </div>
-                                      <div>
-                                          <p className="font-bold text-[#13312A] text-sm">{t.description || t.subcategory}</p>
+                                      <div className="min-w-0">
+                                          <p className="font-bold text-[#13312A] text-sm truncate">{t.description || t.subcategory}</p>
                                           <div className="flex items-center gap-2">
-                                              <p className="text-[10px] text-gray-400">{formatDate(t.date)}</p>
-                                              {selectedCardId === 'all' && (
-                                                  <span className="text-[9px] bg-[#13312A]/5 px-1.5 py-0.5 rounded text-[#13312A] font-bold">{cardName}</span>
+                                              <p className="text-[10px] text-gray-400 font-bold">{formatDate(t.date)}</p>
+                                              {selectedCardId === 'all' && card && (
+                                                  <span className="text-[9px] px-1.5 py-0.5 rounded font-bold text-white opacity-80" style={{ backgroundColor: card.color }}>{card.name}</span>
                                               )}
                                           </div>
                                       </div>
                                   </div>
-                                  <span className="font-bold text-[#13312A]">{formatCurrency(t.amount)}</span>
+                                  <span className="font-bold text-[#13312A] font-serif text-lg">{formatCurrency(t.amount)}</span>
                               </div>
                           )
                       })
